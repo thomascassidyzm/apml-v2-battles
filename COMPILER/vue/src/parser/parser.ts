@@ -210,19 +210,25 @@ export class APMLParser {
     this.advance();
 
     const elements: UIElement[] = [];
-    const baseIndent = this.getIndentLevel();
 
     // Parse elements that are children of this interface (indented more than the interface line)
-    while (this.hasMore() && this.getIndentLevel() > interfaceIndent) {
+    while (this.hasMore()) {
+      const currentIndent = this.getIndentLevel();
       const elementLine = this.getCurrentLine().trim();
 
+      // Stop if we've dedented back to or past the interface level
+      if (currentIndent <= interfaceIndent && elementLine) {
+        break;
+      }
+
+      // Skip empty lines and comments
       if (!elementLine || elementLine.startsWith('#')) {
         this.advance();
         continue;
       }
 
       // Parse UI elements (show, when, for each, etc.)
-      const element = this.parseUIElement(baseIndent);
+      const element = this.parseUIElement(currentIndent);
       if (element) {
         elements.push(element);
       }
@@ -309,12 +315,19 @@ export class APMLParser {
 
     const properties: Record<string, string> = {};
     const children: UIElement[] = [];
-    const baseIndent = this.getIndentLevel();
+    const elementIndent = this.getIndentLevel();
 
-    // Parse properties and nested elements
-    while (this.hasMore() && this.getIndentLevel() >= baseIndent) {
+    // Parse properties and nested elements (children of this show element)
+    while (this.hasMore()) {
+      const currentIndent = this.getIndentLevel();
       const propLine = this.getCurrentLine().trim();
 
+      // Stop if we've dedented to or past the element's level (but skip empty lines)
+      if (propLine && currentIndent < elementIndent) {
+        break;
+      }
+
+      // Skip empty lines and comments
       if (!propLine || propLine.startsWith('#')) {
         this.advance();
         continue;
@@ -322,7 +335,7 @@ export class APMLParser {
 
       // Check for nested show statements or when conditionals
       if (propLine.startsWith('show ') || propLine.startsWith('when ') || propLine.startsWith('template ')) {
-        const childElement = this.parseUIElement(baseIndent);
+        const childElement = this.parseUIElement(currentIndent);
         if (childElement) {
           children.push(childElement);
         }
