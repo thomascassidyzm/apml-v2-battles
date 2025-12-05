@@ -1,6 +1,6 @@
 # APML v2.0 Specification
 
-**Version**: 2.0.0-alpha.1
+**Version**: 2.0.0-alpha.5
 **Status**: Evolving through empirical discovery
 **Last Updated**: 2025-12-05
 
@@ -265,6 +265,187 @@ integrations:
     methods: [email, google, github]
 ```
 
+### State Machines
+
+For modeling discrete states with explicit transitions and guards:
+
+```apml
+state_machine machine_name:
+  states: [state1, state2, state3]
+
+  initial: state1
+
+  transitions:
+    from state1 to state2:
+      when: condition
+      action: what_to_do
+
+    from state2 to state3:
+      when: another_condition
+      cooldown: duration
+      action: what_to_do
+
+    from state3 to state1:
+      when: reset_condition
+```
+
+**State Declaration**:
+- `states: [list]` - All possible states (required)
+- `initial: state` - Starting state (required)
+
+**Transitions**:
+- `from X to Y:` - Explicit state transition
+- `when: condition` - Guard condition (transition only fires if true)
+- `action: what_to_do` - Side effects when transition occurs
+- `cooldown: duration` - Minimum time before this transition can fire again
+
+**Behavior**:
+- Only one state is active at a time
+- Transitions only occur when `when` condition is met
+- If multiple transitions from current state have true conditions, first declared wins
+- Invalid transitions (from states not in current state) are ignored
+- Actions execute during the transition (after leaving old state, before entering new state)
+
+**Example: Authentication Flow**
+```apml
+state_machine auth_flow:
+  states: [anonymous, authenticating, authenticated, error]
+
+  initial: anonymous
+
+  transitions:
+    from anonymous to authenticating:
+      when: user clicks login_button
+      action: show loading_spinner
+
+    from authenticating to authenticated:
+      when: auth_success
+      action:
+        hide loading_spinner
+        redirect to dashboard
+        show notification "Welcome back!"
+
+    from authenticating to error:
+      when: auth_failed
+      action:
+        hide loading_spinner
+        show error_message
+        log auth_error
+
+    from error to anonymous:
+      when: user clicks retry_button
+      action: clear error_message
+
+    from authenticated to anonymous:
+      when: user clicks logout_button
+      action:
+        clear user_session
+        redirect to home
+```
+
+**Example: Learning Progress (with Cooldown)**
+```apml
+state_machine question_mastery:
+  states: [new, learning, familiar, practiced, mastered]
+
+  initial: new
+
+  transitions:
+    from new to learning:
+      when: correct_count >= 3
+      action:
+        celebrate "Starting to learn!"
+        update progress_bar
+
+    from learning to familiar:
+      when: accuracy >= 0.7 and attempts >= 10
+      cooldown: 24 hours
+      action:
+        celebrate "Getting familiar!"
+        unlock next_question
+
+    from familiar to practiced:
+      when: consecutive_correct >= 5
+      cooldown: 48 hours
+      action: award badge "Practiced"
+
+    from practiced to mastered:
+      when: accuracy >= 0.9 and total_attempts >= 50
+      cooldown: 7 days
+      action:
+        celebrate "Mastered!"
+        add to mastered_count
+        update leaderboard
+
+    from mastered to practiced:
+      when: accuracy < 0.8
+      action: show notification "Needs review"
+```
+
+**Example: Post Publishing Workflow**
+```apml
+state_machine post_status:
+  states: [draft, validating, publishing, published, failed]
+
+  initial: draft
+
+  transitions:
+    from draft to validating:
+      when: user clicks publish_button
+      action:
+        validate post_content
+        check character_limit
+
+    from validating to publishing:
+      when: validation_passed
+      action:
+        show progress_indicator
+        call api publish_post
+
+    from validating to draft:
+      when: validation_failed
+      action: show validation_errors
+
+    from publishing to published:
+      when: api_success
+      action:
+        show notification "Post published!"
+        redirect to post_page
+
+    from publishing to failed:
+      when: api_error
+      action:
+        show error_message
+        log publish_error
+
+    from failed to draft:
+      when: user clicks edit_button
+      action: clear error_message
+
+    from published to draft:
+      when: user clicks unpublish_button
+      action:
+        call api unpublish_post
+        show notification "Post unpublished"
+```
+
+**Use Cases**:
+- Authentication and authorization flows
+- Multi-step forms and wizards
+- Content publishing workflows (draft → review → published)
+- Learning/mastery progression systems
+- Payment processing (pending → processing → completed/failed)
+- Game states (lobby → playing → ended)
+- Connection states (disconnected → connecting → connected)
+
+**Compiler Requirements**:
+- Must validate that all referenced states are declared in `states` list
+- Must ensure `initial` state exists in `states` list
+- Must enforce single active state at runtime
+- Should warn about unreachable states (no transitions leading to them)
+- Must implement cooldown tracking with proper time comparison
+- Should provide state change events for debugging/logging
+
 ### Real-time Connections
 
 For persistent connections that push updates to the client (WebSocket, SSE, etc.):
@@ -462,6 +643,82 @@ registry:
 ## Extensions Log
 
 As battles discover gaps, new constructs are added here:
+
+### v2.0.0-alpha.5 (2025-12-05)
+**Added: State Machines (GAP-002)**
+
+The `state_machine` construct enables formal modeling of discrete states with explicit transitions, guards, and actions. This pattern appeared in 4 out of 6 battles and is fundamental for modeling workflows, authentication flows, and multi-step processes.
+
+**Key Features**:
+- Explicit state enumeration with `states: [list]`
+- Required `initial: state` declaration
+- Transition guards with `when: condition`
+- Side effects with `action: what_to_do`
+- Optional `cooldown: duration` to rate-limit transitions
+- Single active state guarantee
+
+**Synthesis from Battles**:
+- Zenjin: Waterfall progression system (new → learning → mastered) with time-based cooldowns
+- Alexander: Authentication flow (anonymous → authenticating → authenticated/error)
+- Cowch: Gesture state tracking
+- X.com: Post states (draft → posting → posted → failed)
+
+**Use Cases**:
+- Authentication and authorization flows
+- Multi-step forms and wizards
+- Content publishing workflows (draft → review → published)
+- Learning/mastery progression systems
+- Payment processing (pending → processing → completed/failed)
+- Game states (lobby → playing → ended)
+- Connection states (disconnected → connecting → connected)
+
+**Example - Auth Flow**:
+```apml
+state_machine auth_flow:
+  states: [anonymous, authenticating, authenticated, error]
+  initial: anonymous
+
+  transitions:
+    from anonymous to authenticating:
+      when: user clicks login_button
+      action: show loading_spinner
+
+    from authenticating to authenticated:
+      when: auth_success
+      action:
+        redirect to dashboard
+        show notification "Welcome back!"
+
+    from authenticating to error:
+      when: auth_failed
+      action: show error_message
+```
+
+**Example - Learning Progression with Cooldowns**:
+```apml
+state_machine question_mastery:
+  states: [new, learning, familiar, practiced, mastered]
+  initial: new
+
+  transitions:
+    from learning to familiar:
+      when: accuracy >= 0.7 and attempts >= 10
+      cooldown: 24 hours
+      action: celebrate "Getting familiar!"
+
+    from practiced to mastered:
+      when: accuracy >= 0.9 and total_attempts >= 50
+      cooldown: 7 days
+      action: update leaderboard
+```
+
+**Compiler Requirements**:
+- Must validate all referenced states exist in `states` list
+- Must ensure `initial` state is valid
+- Must enforce single active state at runtime
+- Should warn about unreachable states
+- Must implement cooldown tracking with proper time comparison
+- Should provide state change events for debugging
 
 ### v2.0.0-alpha.4 (2025-12-05)
 **Added: Computed Values (GAP-004)**

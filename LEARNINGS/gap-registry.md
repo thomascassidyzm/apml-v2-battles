@@ -74,9 +74,10 @@ Unified `realtime` construct with connection lifecycle handlers, channel subscri
 ---
 
 ### GAP-002: State Machines
-**Status:** 🔴 Open
+**Status:** 🟢 Merged
 **Appeared in:** Alexander, Zenjin, Cowch, X.com (4/6 battles)
 **Severity:** CRITICAL
+**Merged in:** APML v2.0.0-alpha.5
 
 **Problem:**
 Many features have discrete states with transitions (auth flows, payment flows, content loading). APML has no formal state machine construct.
@@ -123,7 +124,8 @@ state_machine auth_flow:
 - Notification states: unread → read
 - Space states: scheduled → live → ended
 
-**Synthesis needed:** Formalize `state_machine` block with guards, actions, cooldowns.
+**Solution (Merged):**
+Added `state_machine` construct with explicit state declarations, transition guards, actions, and optional cooldowns. Supports authentication flows, multi-step processes, and time-gated progression systems. See APML-V2-SPEC.md "State Machines" section.
 
 ---
 
@@ -407,6 +409,7 @@ Cryptographic operations are implementation details, not declarative specs. Apps
 
 | Date | Gap | Solution | Spec Version |
 |------|-----|----------|--------------|
+| 2025-12-05 | GAP-002 | State machines with explicit states, transitions, guards, actions, and cooldowns | v2.0.0-alpha.5 |
 | 2025-12-05 | GAP-004 | Computed/reactive values with `computed` construct, auto-tracking, formatting, caching | v2.0.0-alpha.4 |
 | 2025-12-05 | GAP-001 | Real-time connections with `realtime` block, WebSocket support, subscriptions, reconnection policies | v2.0.0-alpha.3 |
 | 2025-12-05 | GAP-003 | Optimistic UI with `optimistic` block, automatic rollback, success/error callbacks | v2.0.0-alpha.2 |
