@@ -258,9 +258,10 @@ Unified `external` construct with type categorization (auth_provider, payments, 
 ---
 
 ### GAP-007: Navigation Guards
-**Status:** 🔴 Open
+**Status:** 🟢 Merged
 **Appeared in:** Popty, Zenjin (2/6 battles)
 **Severity:** HIGH
+**Merged in:** APML v2.0.0-alpha.8
 
 **Problem:**
 Routes need protection (auth required, role required, feature flags). APML has `navigation` but no guards.
@@ -294,7 +295,8 @@ routes:
     on_guard_fail: redirect("/login")
 ```
 
-**Synthesis needed:** Decide on inline guards vs separate guard definitions.
+**Solution (Merged):**
+Unified `navigation` construct with inline guard support. Supports both single `guard:` and multiple `guards: [list]` syntax. Built-in guard types include `authenticated`, `role in [list]`, `permission("name")`, and `feature_flag("name")`. Provides both `fallback: /path` for automatic redirects and `on_guard_fail:` for custom handlers. See APML-V2-SPEC.md "Navigation" section.
 
 ---
 
@@ -397,6 +399,7 @@ Cryptographic operations are implementation details, not declarative specs. Apps
 
 | Date | Gap | Solution | Spec Version |
 |------|-----|----------|--------------|
+| 2025-12-05 | GAP-007 | Navigation guards with `route` declarations, single/multiple guards, `fallback` and `on_guard_fail` handlers, built-in guard types | v2.0.0-alpha.8 |
 | 2025-12-05 | GAP-005 | Virtualized lists with `virtualized_list` construct, pagination strategies, scroll event handlers, item templates | v2.0.0-alpha.7 |
 | 2025-12-05 | GAP-006 | External integrations with `external` construct, SDK references, event handlers, webhook support with signature verification | v2.0.0-alpha.6 |
 | 2025-12-05 | GAP-002 | State machines with explicit states, transitions, guards, actions, and cooldowns | v2.0.0-alpha.5 |

@@ -1,6 +1,6 @@
 # APML v2.0 Specification
 
-**Version**: 2.0.0-alpha.7
+**Version**: 2.0.0-alpha.8
 **Status**: Evolving through empirical discovery
 **Last Updated**: 2025-12-05
 
@@ -887,6 +887,163 @@ interface catalog_view:
 - Should provide loading states and placeholders
 - Must handle edge cases (empty lists, single item, rapid scrolling)
 
+### Navigation
+
+```apml
+navigation:
+
+  route /path:
+    component: ComponentName
+    guard: condition
+    fallback: /redirect_path
+
+  route /other-path:
+    component: OtherComponent
+    guards:
+      - guard_condition_1
+      - guard_condition_2
+    on_guard_fail:
+      custom_handler_action
+```
+
+**Route Declaration**:
+- `route /path` - Define a route with a path pattern
+- `component` - Component to render when route matches
+- Path parameters supported: `/user/{id}`, `/post/{slug}`
+
+**Single Guard**:
+```apml
+route /dashboard:
+  guard: authenticated
+  fallback: /login
+```
+
+**Multiple Guards**:
+```apml
+route /admin:
+  guards:
+    - authenticated
+    - role in [admin, superadmin]
+  fallback: /unauthorized
+```
+
+**Guard Conditions**:
+- `authenticated` - User must be logged in
+- `role in [list]` - User must have one of the specified roles
+- `permission("name")` - User must have a specific permission
+- `feature_flag("name")` - Feature flag must be enabled
+- Custom expressions: `user.subscription == "premium"`
+
+**Fallback Handling**:
+- `fallback: /path` - Redirect to path if guard fails
+- `on_guard_fail:` - Custom action when guard fails (alternative to fallback)
+
+**Example: Authentication Required**
+```apml
+navigation:
+
+  route /dashboard:
+    component: Dashboard
+    guard: authenticated
+    fallback: /login
+
+  route /profile:
+    component: UserProfile
+    guard: authenticated
+    fallback: /login
+```
+
+**Example: Role-Based Access**
+```apml
+navigation:
+
+  route /admin:
+    component: AdminPanel
+    guards:
+      - authenticated
+      - role in [admin, superadmin]
+    fallback: /unauthorized
+
+  route /moderator:
+    component: ModeratorPanel
+    guards:
+      - authenticated
+      - role in [moderator, admin]
+    fallback: /home
+```
+
+**Example: Feature Flags**
+```apml
+navigation:
+
+  route /beta-feature:
+    component: BetaFeature
+    guards:
+      - authenticated
+      - feature_flag("beta_enabled")
+    fallback: /waitlist
+
+  route /experimental:
+    component: ExperimentalUI
+    guard: feature_flag("new_ui") and user.opt_in == true
+    fallback: /home
+```
+
+**Example: Custom Guard Handlers**
+```apml
+navigation:
+
+  route /pipeline/{id}:
+    component: PipelineView
+    guards:
+      - authenticated
+      - permission("view_pipeline")
+    on_guard_fail:
+      log access_attempt with { user: current_user, route: current_route }
+      show notification "You don't have permission to view this pipeline"
+      redirect to "/pipelines"
+```
+
+**Example: Subscription-Based Access**
+```apml
+navigation:
+
+  route /premium-content:
+    component: PremiumContent
+    guards:
+      - authenticated
+      - user.subscription in [premium, enterprise]
+    on_guard_fail:
+      show upgrade_modal
+      track event "paywall_hit"
+```
+
+**Behavior**:
+- **Evaluation order**: Guards evaluated in declaration order, stops at first failure
+- **Async guards**: Guards can perform async checks (API calls, DB queries)
+- **Navigation blocking**: Route navigation blocked until all guards pass
+- **Automatic redirect**: If `fallback` specified, automatic redirect on guard failure
+- **Custom handling**: `on_guard_fail` allows custom logic before/instead of redirect
+- **Query preservation**: Failed navigation can preserve query params for return journey
+
+**Use Cases**:
+- Protecting authenticated routes
+- Role-based access control (RBAC)
+- Permission-based access control
+- Feature flag gating
+- Subscription-based content access
+- Beta/experimental feature access
+- Custom authorization logic
+
+**Compiler Requirements**:
+- Must evaluate guards before route navigation completes
+- Must support async guard evaluation
+- Should provide loading states during guard evaluation
+- Must handle guard failures gracefully
+- Should support route metadata for guards
+- Must implement proper redirect with preserved context
+- Should warn about unreachable routes (impossible guard combinations)
+
 ### Deployment
 
 ```apml
@@ -972,6 +1129,88 @@ registry:
 ## Extensions Log
 
 As battles discover gaps, new constructs are added here:
+
+### v2.0.0-alpha.8 (2025-12-05)
+**Added: Navigation Guards (GAP-007)**
+
+The `navigation` construct with guard support enables route protection based on authentication, roles, permissions, and feature flags. This pattern appeared in 2 out of 6 battles and is critical for access control in multi-user applications.
+
+**Key Features**:
+- `route /path` - Route declaration with path patterns
+- `guard: condition` - Single guard condition
+- `guards: [list]` - Multiple guard conditions (evaluated in order)
+- `fallback: /path` - Automatic redirect on guard failure
+- `on_guard_fail:` - Custom handler for guard failures
+- Built-in guard types: `authenticated`, `role in [list]`, `permission("name")`, `feature_flag("name")`
+- Custom guard expressions using state/computed values
+- Path parameter support: `/user/{id}`, `/post/{slug}`
+
+**Synthesis from Battles**:
+- Zenjin: Authentication guards, role-based access (admin/superadmin), feature flag gating
+- Popty: Permission-based pipeline access, custom guard failure handling
+
+**Use Cases**:
+- Protecting authenticated routes (dashboards, profiles)
+- Role-based access control (admin panels, moderator tools)
+- Permission-based access control (view/edit permissions)
+- Feature flag gating (beta features, experimental UI)
+- Subscription-based content access (premium/enterprise)
+- Custom authorization logic with complex conditions
+
+**Example - Authentication & Roles**:
+```apml
+navigation:
+
+  route /dashboard:
+    component: Dashboard
+    guard: authenticated
+    fallback: /login
+
+  route /admin:
+    component: AdminPanel
+    guards:
+      - authenticated
+      - role in [admin, superadmin]
+    fallback: /unauthorized
+```
+
+**Example - Feature Flags & Custom Handlers**:
+```apml
+navigation:
+
+  route /beta-feature:
+    component: BetaFeature
+    guards:
+      - authenticated
+      - feature_flag("beta_enabled")
+    fallback: /waitlist
+
+  route /pipeline/{id}:
+    component: PipelineView
+    guards:
+      - authenticated
+      - permission("view_pipeline")
+    on_guard_fail:
+      log access_attempt
+      show notification "Permission denied"
+      redirect to "/pipelines"
+```
+
+**Behavior**:
+- Guards evaluated in declaration order, stops at first failure
+- Supports async guard evaluation (API calls, DB queries)
+- Navigation blocked until all guards pass
+- Automatic redirect with `fallback` or custom handling with `on_guard_fail`
+- Query params can be preserved for return journey after authentication
+
+**Compiler Requirements**:
+- Must evaluate guards before route navigation completes
+- Must support async guard evaluation
+- Should provide loading states during guard evaluation
+- Must handle guard failures gracefully with fallback or custom handlers
+- Should support route metadata for guards
+- Must implement proper redirect with preserved context
+- Should warn about unreachable routes (impossible guard combinations)
 
 ### v2.0.0-alpha.7 (2025-12-05)
 **Added: Virtualized Lists (GAP-005)**
