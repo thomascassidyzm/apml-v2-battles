@@ -1,7 +1,7 @@
 # APML Swarm Context
 
-**Last Updated:** 2025-12-05T21:05:00Z
-**Updated By:** Master Orchestrator (Wave 1 complete)
+**Last Updated:** 2025-12-05T21:30:00Z
+**Updated By:** Master Orchestrator (Wave 4 in progress)
 
 ---
 
@@ -9,9 +9,9 @@
 
 | Component | Status | Version/Notes |
 |-----------|--------|---------------|
-| **Spec** | Active | 2.0.0-alpha.4 (3 constructs merged) |
+| **Spec** | Complete | 2.0.0-alpha.8 (7 constructs merged) |
 | **Target** | X.com PWA | Feed + Compose + Notifications |
-| **Compiler (Vue)** | Not started | COMPILER/vue/ |
+| **Compiler (Vue)** | Working | COMPILER/vue/ - builds and generates output |
 | **Compiler (React)** | Not started | COMPILER/react/ |
 | **Build Attempts** | 0 | BUILDS/x-pwa/ |
 
@@ -43,12 +43,12 @@ These gaps appeared in 3+ battles and block the X.com PWA build:
 | # | Gap | Battles | Status | Proposal Location |
 |---|-----|---------|--------|-------------------|
 | 1 | **Real-time/WebSocket** | Popty, Signal, X.com, Zenjin | 🟢 Merged | v2.0.0-alpha.3 |
-| 2 | **State machines** | Alexander, Zenjin, Cowch, X.com | 🔴 Open | LEARNINGS/gap-registry.md |
+| 2 | **State machines** | Alexander, Zenjin, Cowch, X.com | 🟢 Merged | v2.0.0-alpha.5 |
 | 3 | **Optimistic UI** | Cowch, Alexander, X.com | 🟢 Merged | v2.0.0-alpha.2 |
 | 4 | **Computed/reactive values** | All 6 battles | 🟢 Merged | v2.0.0-alpha.4 |
-| 5 | **Infinite scroll/virtualization** | X.com | 🔴 Open | LEARNINGS/gap-registry.md |
-| 6 | **External integrations** | Alexander, Zenjin, Popty, X.com | 🔴 Open | LEARNINGS/gap-registry.md |
-| 7 | **Navigation guards** | Popty, Zenjin | 🔴 Open | LEARNINGS/gap-registry.md |
+| 5 | **Infinite scroll/virtualization** | X.com | 🟢 Merged | v2.0.0-alpha.7 |
+| 6 | **External integrations** | Alexander, Zenjin, Popty, X.com | 🟢 Merged | v2.0.0-alpha.6 |
+| 7 | **Navigation guards** | Popty, Zenjin | 🟢 Merged | v2.0.0-alpha.8 |
 | 8 | **Gestures** | Cowch, X.com | 🟡 Lower priority | LEARNINGS/gap-registry.md |
 
 ---
@@ -128,6 +128,23 @@ Keep the loop going. Every agent makes progress. No work is lost.
 - ✅ Spec Agent GAP-004 (Computed) - COMPLETED
 - ✅ Spec Agent GAP-001 (Real-time) - COMPLETED
 - ✅ Spec Agent GAP-003 (Optimistic UI) - COMPLETED
+**Result:** 3 gaps merged (alpha.2, alpha.3, alpha.4)
 
-**Result:** 3 gaps merged into spec (alpha.2, alpha.3, alpha.4)
-**Next:** Wave 2 - remaining gaps (State machines, Infinite scroll, External integrations)
+### Wave 2 - 2025-12-05T21:10:00Z
+**Orchestrator:** Spawned 3 Spec Agents in parallel
+- ✅ Spec Agent GAP-002 (State machines) - COMPLETED
+- ✅ Spec Agent GAP-005 (Virtualized lists) - COMPLETED
+- ✅ Spec Agent GAP-006 (External integrations) - COMPLETED
+**Result:** 3 gaps merged (alpha.5, alpha.6, alpha.7)
+
+### Wave 3 - 2025-12-05T21:20:00Z
+**Orchestrator:** Spawned 2 agents in parallel
+- ✅ Spec Agent GAP-007 (Navigation guards) - COMPLETED
+- ✅ Compiler Agent (Vue scaffold) - COMPLETED
+**Result:** All 7 critical gaps merged! Compiler scaffold created and tested.
+
+### Wave 4 - 2025-12-05T21:30:00Z (IN PROGRESS)
+**Orchestrator:** Building compiler, preparing X.com PWA build
+- ✅ Compiler builds successfully
+- ✅ Compiler generates Vue SFCs from APML
+- 🔄 Next: Write X.com feed APML and compile
