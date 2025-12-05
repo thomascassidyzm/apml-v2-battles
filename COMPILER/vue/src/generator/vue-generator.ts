@@ -156,13 +156,19 @@ export class VueGenerator {
 
     // Generate computed values
     for (const comp of computed) {
+      const computedBody = this.generateComputedBody(comp);
       lines.push(`${this.indent}const ${comp.name} = computed(() => {`);
-      if (comp.expression) {
-        lines.push(`${this.indent}${this.indent}// TODO: Implement expression: ${comp.expression}`);
-      } else if (comp.value) {
-        lines.push(`${this.indent}${this.indent}// TODO: Implement expression: ${comp.value}`);
+
+      // Add the generated body with proper indentation
+      const bodyLines = computedBody.split('\n');
+      for (const bodyLine of bodyLines) {
+        if (bodyLine.trim()) {
+          lines.push(`${this.indent}${this.indent}${bodyLine}`);
+        } else {
+          lines.push('');
+        }
       }
-      lines.push(`${this.indent}${this.indent}return null; // Placeholder`);
+
       lines.push(`${this.indent}});`);
       lines.push('');
     }
@@ -198,6 +204,67 @@ export class VueGenerator {
     const camelCase = modelName.charAt(0).toLowerCase() + modelName.slice(1);
     // Simple pluralization
     return camelCase.endsWith('s') ? camelCase : camelCase + 's';
+  }
+
+  /**
+   * Generate the body of a computed property from APML expression
+   */
+  private generateComputedBody(comp: ComputedValue): string {
+    const expression = comp.expression || comp.value;
+
+    if (!expression) {
+      return 'return null; // No expression provided';
+    }
+
+    // Convert expression to string if needed
+    const expressionStr = this.expressionToString(expression);
+
+    // Check if expression is a multi-line function definition
+    if (expressionStr.trim().startsWith('function(')) {
+      // For function expressions, just return the function itself
+      return `return ${expressionStr};`;
+    }
+
+    // Check for arrow functions
+    if (expressionStr.includes('=>') && !expressionStr.includes('?')) {
+      return `return ${expressionStr};`;
+    }
+
+    // Simple expression - convert APML operators to JavaScript
+    const jsExpression = this.convertAPMLToJS(expressionStr);
+
+    return `return ${jsExpression};`;
+  }
+
+  /**
+   * Convert Expression type to string representation
+   */
+  private expressionToString(expr: any): string {
+    if (typeof expr === 'string') {
+      return expr;
+    }
+    if (typeof expr === 'number' || typeof expr === 'boolean') {
+      return String(expr);
+    }
+    // For complex expression objects, convert to JSON for now
+    // TODO: Implement proper expression tree to JS conversion
+    return JSON.stringify(expr);
+  }
+
+  /**
+   * Convert APML expression syntax to JavaScript
+   */
+  private convertAPMLToJS(expression: string): string {
+    let result = expression;
+
+    // Convert APML comparison operators to JavaScript
+    result = result.replace(/\s+equals\s+/g, ' === ');
+    result = result.replace(/\s+not equals\s+/g, ' !== ');
+    result = result.replace(/\s+and\s+/g, ' && ');
+    result = result.replace(/\s+or\s+/g, ' || ');
+    result = result.replace(/\s+not\s+/g, ' !');
+
+    return result;
   }
 
   // ==========================================================================

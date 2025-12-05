@@ -15,6 +15,8 @@ import type {
   FieldModifier,
   InterfaceSection,
   ShowElement,
+  UIElement,
+  ConditionalElement,
   ComputedValue,
   LogicSection,
 } from '../types/ast.js';
@@ -204,12 +206,14 @@ export class APMLParser {
     if (!match) throw new Error(`Invalid interface declaration: ${line}`);
 
     const name = match[1];
+    const interfaceIndent = this.getIndentLevel();
     this.advance();
 
-    const elements: ShowElement[] = [];
+    const elements: UIElement[] = [];
     const baseIndent = this.getIndentLevel();
 
-    while (this.hasMore() && this.getIndentLevel() >= baseIndent) {
+    // Parse elements that are children of this interface (indented more than the interface line)
+    while (this.hasMore() && this.getIndentLevel() > interfaceIndent) {
       const elementLine = this.getCurrentLine().trim();
 
       if (!elementLine || elementLine.startsWith('#')) {
@@ -217,36 +221,97 @@ export class APMLParser {
         continue;
       }
 
-      // Parse show statements
-      if (elementLine.startsWith('show ')) {
-        elements.push(this.parseShowElement());
-      } else {
-        this.advance();
+      // Parse UI elements (show, when, for each, etc.)
+      const element = this.parseUIElement(baseIndent);
+      if (element) {
+        elements.push(element);
       }
     }
 
     return { name, elements };
   }
 
-  private parseShowElement(): ShowElement {
+  /**
+   * Parse a UI element (show, when, for each, etc.)
+   */
+  private parseUIElement(parentIndent: number): UIElement | null {
     const line = this.getCurrentLine().trim();
-    const match = line.match(/^show\s+(\w+)(?::(.*))?$/);
+
+    // Handle 'when' conditionals
+    if (line.startsWith('when ')) {
+      return this.parseConditionalElement(parentIndent);
+    }
+
+    // Handle 'show' statements
+    if (line.startsWith('show ')) {
+      return this.parseShowElement(parentIndent);
+    }
+
+    // Handle 'for each' loops (future)
+    // if (line.startsWith('for each ')) {
+    //   return this.parseForEachElement(parentIndent);
+    // }
+
+    // Unknown element, skip
+    this.advance();
+    return null;
+  }
+
+  /**
+   * Parse a 'when' conditional element
+   */
+  private parseConditionalElement(parentIndent: number): ConditionalElement {
+    const line = this.getCurrentLine().trim();
+    const match = line.match(/^when\s+(.+):$/);
+    if (!match) throw new Error(`Invalid when statement: ${line}`);
+
+    const condition = match[1];
+    this.advance();
+
+    const thenElements: UIElement[] = [];
+    const baseIndent = this.getIndentLevel();
+
+    // Parse child elements
+    while (this.hasMore() && this.getIndentLevel() >= baseIndent) {
+      const element = this.parseUIElement(baseIndent);
+      if (element) {
+        thenElements.push(element);
+      }
+    }
+
+    return {
+      type: 'when',
+      condition,
+      then: thenElements,
+    };
+  }
+
+  /**
+   * Parse a 'show' element
+   * Handles both: show <type>: and show <type> <name>:
+   */
+  private parseShowElement(parentIndent: number): ShowElement {
+    const line = this.getCurrentLine().trim();
+
+    // Match: show <type> <name>: OR show <type>:
+    // Regex explanation:
+    // - ^show\s+ : starts with "show" followed by whitespace
+    // - (\w+) : capture element type (required)
+    // - (?:\s+(\w+))? : optionally capture element name (non-capturing group for the space)
+    // - : : must end with colon
+    const match = line.match(/^show\s+(\w+)(?:\s+(\w+))?:$/);
     if (!match) throw new Error(`Invalid show statement: ${line}`);
 
-    const elementName = match[1];
-    const inlineProps = match[2];
+    const elementType = match[1];
+    const elementName = match[2] || elementType; // Use type as name if no name provided
 
     this.advance();
 
     const properties: Record<string, string> = {};
-
-    // Parse inline properties if present
-    if (inlineProps) {
-      // TODO: Parse inline properties properly
-    }
-
-    // Parse block properties
+    const children: UIElement[] = [];
     const baseIndent = this.getIndentLevel();
+
+    // Parse properties and nested elements
     while (this.hasMore() && this.getIndentLevel() >= baseIndent) {
       const propLine = this.getCurrentLine().trim();
 
@@ -255,18 +320,62 @@ export class APMLParser {
         continue;
       }
 
-      const propMatch = propLine.match(/^(\w+):\s*(.+)$/);
-      if (propMatch) {
-        properties[propMatch[1]] = propMatch[2];
+      // Check for nested show statements or when conditionals
+      if (propLine.startsWith('show ') || propLine.startsWith('when ') || propLine.startsWith('template ')) {
+        const childElement = this.parseUIElement(baseIndent);
+        if (childElement) {
+          children.push(childElement);
+        }
+        continue;
       }
 
+      // Check for special multi-line sections (on click, on scroll_near_end, etc.)
+      if (propLine.startsWith('on ') && propLine.endsWith(':')) {
+        // Skip event handlers for now
+        const eventBaseIndent = this.getIndentLevel();
+        this.advance();
+        // Skip all lines that are more indented than the 'on' line
+        while (this.hasMore() && this.getIndentLevel() > eventBaseIndent) {
+          this.advance();
+        }
+        continue;
+      }
+
+      // Check for special sections like 'pagination:', 'template:', etc.
+      if (propLine === 'pagination:' || propLine === 'template:') {
+        // Skip these sections for now
+        this.advance();
+        const sectionIndent = this.getIndentLevel();
+        while (this.hasMore() && this.getIndentLevel() >= sectionIndent) {
+          this.advance();
+        }
+        continue;
+      }
+
+      // Parse regular properties
+      const propMatch = propLine.match(/^(\w+):\s*(.*)$/);
+      if (propMatch) {
+        const propName = propMatch[1];
+        const propValue = propMatch[2];
+        properties[propName] = propValue;
+        this.advance();
+        continue;
+      }
+
+      // Unknown line, skip
       this.advance();
+    }
+
+    // Store the element name as a property if it was explicitly provided
+    if (match[2]) {
+      properties['id'] = match[2];
     }
 
     return {
       type: 'show',
-      elementName,
+      elementName: elementType,
       properties,
+      children: children.length > 0 ? children : undefined,
     };
   }
 
@@ -305,6 +414,42 @@ export class APMLParser {
           continue;
         }
 
+        // Check for multi-line value using pipe (|) syntax
+        const multilineMatch = propLine.match(/^(\w+):\s*\|$/);
+        if (multilineMatch && multilineMatch[1] === 'value') {
+          this.advance();
+
+          // Collect all indented lines as the multi-line value
+          const valueLines: string[] = [];
+          const valueIndent = this.getIndentLevel();
+
+          while (this.hasMore()) {
+            const valueLine = this.getCurrentLine();
+            const currentIndent = this.getIndentLevel();
+
+            // Empty lines are preserved
+            if (!valueLine.trim()) {
+              valueLines.push('');
+              this.advance();
+              continue;
+            }
+
+            // Stop if we encounter a line with less indentation than valueIndent
+            if (currentIndent < valueIndent) {
+              break;
+            }
+
+            // Preserve original indentation relative to the value block
+            const relativeIndent = ' '.repeat(Math.max(0, currentIndent - valueIndent));
+            valueLines.push(relativeIndent + valueLine.trim());
+            this.advance();
+          }
+
+          value = valueLines.join('\n').trim();
+          continue;
+        }
+
+        // Single-line property
         const propMatch = propLine.match(/^(\w+):\s*(.+)$/);
         if (propMatch) {
           const key = propMatch[1];
