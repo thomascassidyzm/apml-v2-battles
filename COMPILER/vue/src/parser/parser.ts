@@ -101,10 +101,10 @@ export class APMLParser {
     if (!match) throw new Error(`Invalid data declaration: ${line}`);
 
     const name = match[1];
+    const baseIndent = this.getIndentLevel();
     this.advance();
 
     const fields: Field[] = [];
-    const baseIndent = this.getIndentLevel();
 
     while (this.hasMore() && this.getIndentLevel() > baseIndent) {
       const fieldLine = this.getCurrentLine().trim();

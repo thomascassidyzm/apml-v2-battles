@@ -1,0 +1,424 @@
+# X.com PWA - Phase 1: Core Feed
+# APML v2.0 Specification
+
+app X_Feed_PWA:
+  title: "X.com Feed"
+  description: "Core feed functionality for X.com PWA - Phase 1 MVP"
+  version: "0.1.0"
+  apml_version: "2.0.0"
+
+# =============================================================================
+# DATA MODELS
+# =============================================================================
+
+data User:
+  id: unique_id required
+  username: text required unique
+  display_name: text required
+  avatar_url: url optional
+  verified: boolean default: false
+
+data Post:
+  id: unique_id required
+  content: text required
+  author_id: unique_id required
+  created_at: timestamp required auto
+  likes_count: number default: 0
+  reposts_count: number default: 0
+  replies_count: number default: 0
+
+  relationships:
+    belongs_to: User as author
+
+data Like:
+  id: unique_id required
+  user_id: unique_id required
+  post_id: unique_id required
+  created_at: timestamp required auto
+
+  relationships:
+    belongs_to: User
+    belongs_to: Post
+
+data Repost:
+  id: unique_id required
+  user_id: unique_id required
+  post_id: unique_id required
+  created_at: timestamp required auto
+
+  relationships:
+    belongs_to: User
+    belongs_to: Post
+
+data Bookmark:
+  id: unique_id required
+  user_id: unique_id required
+  post_id: unique_id required
+  created_at: timestamp required auto
+
+  relationships:
+    belongs_to: User
+    belongs_to: Post
+
+# =============================================================================
+# COMPUTED VALUES
+# =============================================================================
+
+computed filtered_posts:
+  value: active_feed_tab == "for_you" ? for_you_posts : following_posts
+
+computed formatted_timestamp:
+  value: |
+    function(created_at) {
+      const now = Date.now()
+      const diff = now - created_at
+      const seconds = diff / 1000
+      const minutes = seconds / 60
+      const hours = minutes / 60
+      const days = hours / 24
+
+      if (seconds < 60) return "now"
+      if (minutes < 60) return Math.floor(minutes) + "m"
+      if (hours < 24) return Math.floor(hours) + "h"
+      if (days < 7) return Math.floor(days) + "d"
+      return created_at.toLocaleDateString()
+    }
+
+computed post_count:
+  value: filtered_posts.length
+
+# =============================================================================
+# INTERFACE
+# =============================================================================
+
+interface feed_view:
+
+  # Header with tab selector
+  show header:
+    position: fixed top
+    background: background_color
+    border_bottom: 1px solid border_color
+
+    show tab_selector:
+      show tab for_you_tab:
+        text: "For You"
+        active: active_feed_tab == "for_you"
+        on click:
+          set active_feed_tab to "for_you"
+
+      show tab following_tab:
+        text: "Following"
+        active: active_feed_tab == "following"
+        on click:
+          set active_feed_tab to "following"
+
+  # Main feed with virtualized list
+  show main_feed:
+    padding_top: header_height
+
+    when is_loading and post_count == 0:
+      show loading_spinner:
+        text: "Loading posts..."
+
+    when not is_loading and post_count == 0:
+      show empty_state:
+        text: "No posts to show"
+        icon: "timeline"
+
+    when post_count > 0:
+      show virtualized_list post_feed:
+        items: filtered_posts
+        item_height: estimated 120px
+        overscan: 5
+
+        pagination:
+          strategy: cursor
+          load_more: on_scroll_end
+
+        on scroll_near_end(threshold: 80%):
+          load_more_posts()
+
+        template post_card:
+          show card:
+            padding: 16px
+            border_bottom: 1px solid border_color
+
+            # Author info
+            show author_section:
+              layout: horizontal
+              gap: 12px
+
+              show avatar:
+                src: post.author.avatar_url
+                size: 48px
+                shape: circle
+                fallback: default_avatar
+
+              show author_info:
+                layout: vertical
+                gap: 2px
+
+                show display_name:
+                  text: post.author.display_name
+                  font_weight: bold
+                  inline: true
+
+                  when post.author.verified:
+                    show verified_badge:
+                      icon: "verified"
+                      color: blue
+                      inline: true
+
+                show username:
+                  text: "@" + post.author.username
+                  color: text_secondary
+                  font_size: 14px
+
+            # Post content
+            show content_section:
+              margin_top: 8px
+
+              show post_text:
+                text: post.content
+                font_size: 15px
+                line_height: 1.5
+                white_space: pre_wrap
+
+            # Timestamp
+            show timestamp_section:
+              margin_top: 8px
+
+              show timestamp:
+                text: formatted_timestamp(post.created_at)
+                color: text_secondary
+                font_size: 14px
+
+            # Action buttons (static for Phase 1)
+            show actions_section:
+              layout: horizontal
+              justify: space_between
+              margin_top: 12px
+              max_width: 425px
+
+              show reply_button:
+                icon: "chat_bubble_outline"
+                text: post.replies_count > 0 ? post.replies_count : ""
+                color: text_secondary
+                on click:
+                  # Phase 2 implementation
+                  show notification "Reply coming in Phase 2"
+
+              show repost_button:
+                icon: "repeat"
+                text: post.reposts_count > 0 ? post.reposts_count : ""
+                color: text_secondary
+                on click:
+                  # Phase 2 implementation
+                  show notification "Repost coming in Phase 2"
+
+              show like_button:
+                icon: post.is_liked ? "favorite" : "favorite_border"
+                text: post.likes_count > 0 ? post.likes_count : ""
+                color: post.is_liked ? red : text_secondary
+                on click:
+                  # Phase 2 implementation
+                  show notification "Like coming in Phase 2"
+
+              show share_button:
+                icon: "ios_share"
+                color: text_secondary
+                on click:
+                  # Phase 2 implementation
+                  show notification "Share coming in Phase 2"
+
+  # Bottom navigation
+  show bottom_nav:
+    position: fixed bottom
+    background: background_color
+    border_top: 1px solid border_color
+
+    show nav_item home:
+      icon: "home"
+      active: true
+      on click:
+        refresh_feed()
+
+    show nav_item search:
+      icon: "search"
+      active: false
+      on click:
+        show notification "Search coming in later phase"
+
+    show nav_item notifications:
+      icon: "notifications"
+      active: false
+      on click:
+        show notification "Notifications coming in later phase"
+
+    show nav_item messages:
+      icon: "mail"
+      active: false
+      on click:
+        show notification "Messages coming in later phase"
+
+# =============================================================================
+# LOGIC
+# =============================================================================
+
+logic feed_logic:
+
+  # State management
+  state:
+    active_feed_tab: text default: "for_you"
+    for_you_posts: list of Post default: []
+    following_posts: list of Post default: []
+    is_loading: boolean default: false
+    cursor: text | null default: null
+    has_more: boolean default: true
+
+  # Initial load
+  process initial_load:
+    when page loads:
+      set is_loading to true
+      load_posts_for_tab(active_feed_tab)
+
+  # Load posts for active tab
+  process load_posts_for_tab:
+    when triggered with tab_name:
+      set is_loading to true
+
+      call api fetch_posts with {
+        feed_type: tab_name,
+        cursor: null,
+        limit: 20
+      }
+
+      on_success:
+        if tab_name == "for_you":
+          set for_you_posts to response.posts
+        else:
+          set following_posts to response.posts
+
+        set cursor to response.next_cursor
+        set has_more to response.has_more
+        set is_loading to false
+
+      on_error:
+        set is_loading to false
+        show notification "Failed to load posts. Please try again."
+
+  # Load more posts (infinite scroll)
+  process load_more_posts:
+    when triggered:
+      if not is_loading and has_more:
+        set is_loading to true
+
+        call api fetch_posts with {
+          feed_type: active_feed_tab,
+          cursor: cursor,
+          limit: 20
+        }
+
+        on_success:
+          if active_feed_tab == "for_you":
+            append response.posts to for_you_posts
+          else:
+            append response.posts to following_posts
+
+          set cursor to response.next_cursor
+          set has_more to response.has_more
+          set is_loading to false
+
+        on_error:
+          set is_loading to false
+          show notification "Failed to load more posts"
+
+  # Refresh feed
+  process refresh_feed:
+    when triggered:
+      set cursor to null
+      load_posts_for_tab(active_feed_tab)
+
+  # Switch feed tab
+  process switch_tab:
+    when active_feed_tab changes:
+      if active_feed_tab == "for_you" and for_you_posts.length == 0:
+        load_posts_for_tab("for_you")
+      else if active_feed_tab == "following" and following_posts.length == 0:
+        load_posts_for_tab("following")
+
+# =============================================================================
+# INTEGRATIONS
+# =============================================================================
+
+integrations:
+
+  api x_api:
+    endpoint: "https://api.x.com/v2"
+
+    method fetch_posts:
+      path: "/timeline"
+      method: GET
+      params:
+        feed_type: text
+        cursor: text | null
+        limit: number
+      returns: {
+        posts: list of Post,
+        next_cursor: text | null,
+        has_more: boolean
+      }
+
+# =============================================================================
+# THEME & STYLING
+# =============================================================================
+
+theme:
+  colors:
+    background_color: "#ffffff"
+    text_primary: "#0f1419"
+    text_secondary: "#536471"
+    border_color: "#eff3f4"
+    blue: "#1d9bf0"
+    red: "#f91880"
+
+  dimensions:
+    header_height: 53px
+    bottom_nav_height: 53px
+
+  fonts:
+    body: "system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+
+# =============================================================================
+# REGISTRY
+# =============================================================================
+
+registry:
+
+  components:
+    FeedView:
+      state:
+        - active_feed_tab: ref<text>
+        - for_you_posts: ref<list of Post>
+        - following_posts: ref<list of Post>
+        - is_loading: ref<boolean>
+        - cursor: ref<text | null>
+        - has_more: ref<boolean>
+      computed:
+        - filtered_posts: computed<list of Post>
+        - post_count: computed<number>
+      methods:
+        - load_posts_for_tab(tab_name: text): Promise<void>
+        - load_more_posts(): Promise<void>
+        - refresh_feed(): void
+        - formatted_timestamp(created_at: timestamp): text
+
+  api_endpoints:
+    - GET /timeline -> { posts: list of Post, next_cursor: text | null, has_more: boolean }
+
+  database_tables:
+    - users: User
+    - posts: Post
+    - likes: Like
+    - reposts: Repost
+    - bookmarks: Bookmark
