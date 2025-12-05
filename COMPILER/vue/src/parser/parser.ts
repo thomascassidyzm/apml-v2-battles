@@ -143,19 +143,36 @@ export class APMLParser {
     const parts = definition.split(/\s+/);
     const type = this.parseFieldType(parts[0]);
     const modifiers: FieldModifier[] = [];
+    let defaultValue: string | undefined;
 
     // Parse modifiers
-    for (let i = 1; i < parts.length; i++) {
+    let i = 1;
+    while (i < parts.length) {
       const modifier = parts[i];
       if (modifier === 'required' || modifier === 'optional' || modifier === 'unique' || modifier === 'auto') {
         modifiers.push(modifier);
+        i++;
+      } else if (modifier === 'default:') {
+        // Next part is the default value
+        if (i + 1 < parts.length) {
+          defaultValue = parts[i + 1];
+          modifiers.push({ default: defaultValue });
+          i += 2;
+        } else {
+          i++;
+        }
       } else if (modifier.startsWith('default:')) {
-        const defaultValue = modifier.substring(8);
+        // Handle case where there's no space: "default:0"
+        defaultValue = modifier.substring(8);
         modifiers.push({ default: defaultValue });
+        i++;
+      } else {
+        // Unknown modifier, skip
+        i++;
       }
     }
 
-    return { name, type, modifiers };
+    return { name, type, modifiers, defaultValue };
   }
 
   private parseFieldType(typeStr: string): FieldType {
