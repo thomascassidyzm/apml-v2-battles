@@ -54,7 +54,7 @@
               <button class="repost-button" data-icon="repeat">
                 {{ post.reposts_count > 0 ? post.reposts_count : '' }}
               </button>
-              <button class="like-button" :data-icon="post.is_liked ? 'favorite' : 'favorite_border'">
+              <button class="like-button" data-icon="favorite_border">
                 {{ post.likes_count > 0 ? post.likes_count : '' }}
               </button>
               <button class="share-button" data-icon="ios_share">
