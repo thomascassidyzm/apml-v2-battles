@@ -230,9 +230,10 @@ show feed:
 ---
 
 ### GAP-006: External Integrations
-**Status:** 🔴 Open
+**Status:** 🟢 Merged
 **Appeared in:** Alexander, Zenjin, Popty, X.com (4/6 battles)
 **Severity:** HIGH
+**Merged in:** APML v2.0.0-alpha.6
 
 **Problem:**
 Real apps integrate with Stripe, Clerk, analytics, etc. APML has `integrations.api` but no patterns for OAuth, webhooks, SDKs.
@@ -265,7 +266,8 @@ external_integration stripe:
       activate subscription for user
 ```
 
-**Synthesis needed:** Unified `external` or `integration` block with type-specific handling.
+**Solution (Merged):**
+Unified `external` construct with type categorization (auth_provider, payments, analytics, email, monitoring, storage, other), SDK package references, explicit `provides` list, event handlers with `on event_name`, and webhook handlers with signature verification. See APML-V2-SPEC.md "External Integrations" section.
 
 ---
 
@@ -409,6 +411,7 @@ Cryptographic operations are implementation details, not declarative specs. Apps
 
 | Date | Gap | Solution | Spec Version |
 |------|-----|----------|--------------|
+| 2025-12-05 | GAP-006 | External integrations with `external` construct, SDK references, event handlers, webhook support with signature verification | v2.0.0-alpha.6 |
 | 2025-12-05 | GAP-002 | State machines with explicit states, transitions, guards, actions, and cooldowns | v2.0.0-alpha.5 |
 | 2025-12-05 | GAP-004 | Computed/reactive values with `computed` construct, auto-tracking, formatting, caching | v2.0.0-alpha.4 |
 | 2025-12-05 | GAP-001 | Real-time connections with `realtime` block, WebSocket support, subscriptions, reconnection policies | v2.0.0-alpha.3 |

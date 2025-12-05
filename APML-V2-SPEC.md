@@ -265,6 +265,157 @@ integrations:
     methods: [email, google, github]
 ```
 
+### External Integrations
+
+For third-party services and SDKs (authentication providers, payment processors, analytics, etc.):
+
+```apml
+external integration_name:
+  type: auth_provider | payments | analytics | email | monitoring | storage | other
+  sdk: "package_name"  # Optional: npm package for SDK-based integrations
+
+  provides:
+    - exposed_value_1
+    - exposed_value_2
+    - exposed_method
+
+  on event_name:
+    action_to_perform
+
+  on event_name(data):
+    action_with_data
+```
+
+**Integration Types**:
+- `auth_provider` - Authentication/authorization services (Clerk, Auth0, Firebase Auth)
+- `payments` - Payment processing (Stripe, PayPal, Square)
+- `analytics` - Analytics and tracking (Mixpanel, Segment, Google Analytics)
+- `email` - Email services (SendGrid, Mailgun, Postmark)
+- `monitoring` - Error tracking and monitoring (Sentry, LogRocket)
+- `storage` - File storage (S3, Cloudinary, Uploadcare)
+- `other` - Custom or uncategorized integrations
+
+**Properties**:
+- `type` - Category of integration (required)
+- `sdk` - NPM package name for SDK-based integrations (optional)
+- `provides` - List of values, methods, or components exposed to the app (optional)
+- `on event_name` - Event handlers for integration lifecycle events (optional)
+
+**Example: Authentication Provider (SDK-based)**
+```apml
+external clerk:
+  type: auth_provider
+  sdk: "@clerk/vue"
+
+  provides:
+    - current_user
+    - sign_in_flow
+    - sign_out
+    - user_button
+
+  on auth_change(user):
+    if user:
+      sync user_profile to database
+      navigate to "/dashboard"
+    else:
+      navigate to "/login"
+
+  on session_created:
+    track analytics_event "user_signed_in"
+```
+
+**Example: Payment Processing with Webhooks**
+```apml
+external stripe:
+  type: payments
+  sdk: "@stripe/stripe-js"
+
+  provides:
+    - checkout_session
+    - payment_element
+
+  webhook checkout_complete:
+    verify: stripe_signature
+    on event "checkout.session.completed":
+      activate subscription for user
+      send email "Welcome to Premium"
+      track analytics_event "subscription_started"
+
+  webhook payment_failed:
+    verify: stripe_signature
+    on event "payment_intent.payment_failed":
+      notify user "Payment failed"
+      downgrade subscription
+```
+
+**Example: Analytics Integration**
+```apml
+external mixpanel:
+  type: analytics
+  sdk: "mixpanel-browser"
+
+  provides:
+    - track_event
+    - identify_user
+
+  on app_loaded:
+    identify_user with current_user.id
+
+  on page_view:
+    track_event "page_viewed" with { path: current_route }
+```
+
+**Webhook Handlers**:
+
+Webhook handlers allow external services to push events to your application:
+
+```apml
+webhook webhook_name:
+  verify: signature_type
+  on event "event.name":
+    action_to_perform
+```
+
+**Verification Types**:
+- `stripe_signature` - Stripe webhook signature verification
+- `github_signature` - GitHub webhook HMAC verification
+- `hmac_sha256` - Generic HMAC SHA-256 verification
+- `bearer_token` - Bearer token authentication
+- `custom` - Custom verification logic
+
+**Example: GitHub Webhooks**
+```apml
+external github:
+  type: other
+
+  webhook pull_request_events:
+    verify: github_signature
+    on event "pull_request.opened":
+      notify team "New PR: " + event.pull_request.title
+      assign reviewers from team.members
+
+  webhook push_events:
+    verify: github_signature
+    on event "push":
+      if event.ref == "refs/heads/main":
+        trigger deployment
+```
+
+**Example: Custom Monitoring**
+```apml
+external sentry:
+  type: monitoring
+  sdk: "@sentry/vue"
+
+  on error_captured(error):
+    log error to console
+    track user_context
+
+  on app_crash:
+    show error_boundary
+    send notification to slack
+```
+
 ### State Machines
 
 For modeling discrete states with explicit transitions and guards:
@@ -558,6 +709,184 @@ realtime chat_socket:
   reconnect_policy: exponential_backoff(max: 5 minutes)
 ```
 
+### Virtualized Lists
+
+For rendering large or infinite lists efficiently by only rendering visible items:
+
+```apml
+show virtualized_list list_name:
+  items: data_source
+  item_height: estimated Npx
+  overscan: N
+
+  pagination:
+    strategy: cursor | offset
+    load_more: trigger_condition
+
+  on scroll_near_end(threshold: percentage):
+    action_to_load_more
+
+  template item_template_name:
+    # Template for rendering each item
+    show element with item
+```
+
+**Core Properties**:
+- `items` - Data source (array or computed collection)
+- `item_height` - Estimated height of each item in pixels (for scroll calculations)
+- `overscan` - Number of extra items to render above/below viewport (default: 3)
+
+**Pagination**:
+- `strategy` - How to paginate:
+  - `cursor` - Cursor-based pagination (recommended for real-time feeds)
+  - `offset` - Offset-based pagination (page number/limit)
+- `load_more` - When to trigger loading:
+  - `on_scroll_end` - Automatically when scrolled near end
+  - `on_button_click` - Manual "Load More" button
+  - `automatic` - Load immediately when threshold reached
+
+**Scroll Events**:
+- `on scroll_near_end(threshold: N%)` - Triggered when scrolled to N% of list
+- `on scroll_top` - Triggered when scrolled to top (for pull-to-refresh)
+
+**Alternative Syntax** (modifier-based):
+```apml
+show list:
+  type: virtualized
+  items: posts
+  # ... rest of properties
+```
+
+**Example: Infinite Feed**
+```apml
+interface feed_view:
+
+  show virtualized_list post_feed:
+    items: posts
+    item_height: estimated 120px
+    overscan: 5
+
+    pagination:
+      strategy: cursor
+      load_more: on_scroll_end
+
+    on scroll_near_end(threshold: 80%):
+      load_more_posts()
+
+    template post_card:
+      show card:
+        avatar: post.author.avatar
+        username: post.author.username
+        content: post.text
+        timestamp: post.created_at
+        likes: post.likes_count
+
+logic feed_logic:
+
+  state:
+    posts: list of Post
+    cursor: text | null
+    is_loading: boolean
+
+  process load_more_posts:
+    when triggered:
+      if not is_loading:
+        set is_loading to true
+
+        call api fetch_posts with {
+          cursor: cursor,
+          limit: 20
+        }
+
+        on_success:
+          append response.posts to posts
+          set cursor to response.next_cursor
+          set is_loading to false
+
+        on_error:
+          set is_loading to false
+          show notification "Failed to load posts"
+```
+
+**Example: Chat Message List**
+```apml
+interface chat_view:
+
+  show virtualized_list message_list:
+    items: messages
+    item_height: estimated 60px
+    overscan: 10
+    reverse_scroll: true  # Newest at bottom
+
+    pagination:
+      strategy: cursor
+      load_more: on_scroll_top  # Load older when scrolling up
+
+    on scroll_top:
+      load_older_messages()
+
+    template message_bubble:
+      show bubble:
+        position: message.is_mine ? "right" : "left"
+        text: message.content
+        timestamp: message.sent_at
+```
+
+**Example: Product Catalog**
+```apml
+interface catalog_view:
+
+  computed filtered_products: products.filter(p => p.category == selected_category)
+
+  show virtualized_list product_grid:
+    items: filtered_products
+    item_height: estimated 300px
+    overscan: 3
+
+    pagination:
+      strategy: offset
+      load_more: on_button_click  # Manual "Load More" button
+
+    template product_card:
+      show card:
+        image: product.image_url
+        title: product.name
+        price: product.price
+        rating: product.avg_rating
+
+  show button load_more_button:
+    text: "Load More Products"
+    when: has_more_products
+    on click:
+      load_next_page()
+```
+
+**Behavior**:
+- **Virtualization**: Only DOM elements for visible items (+ overscan) are rendered
+- **Performance**: Handles lists of 1000s+ items without lag
+- **Scroll position**: Maintained automatically during updates
+- **Dynamic height**: If `item_height` is "estimated", actual heights measured after render
+- **Reactive updates**: When `items` changes, list updates automatically
+- **Prepend support**: New items can be prepended (e.g., new posts) without scroll jump
+
+**Use Cases**:
+- Social media feeds (infinite scroll)
+- Chat message history
+- Product catalogs with pagination
+- Log viewers
+- Search results
+- News feeds
+- Activity timelines
+
+**Compiler Requirements**:
+- Must implement virtual scrolling (render only visible items)
+- Must track scroll position and calculate visible range
+- Must handle dynamic item heights if not fixed
+- Should implement efficient scroll event throttling
+- Must support bidirectional loading (top/bottom)
+- Should provide loading states and placeholders
+- Must handle edge cases (empty lists, single item, rapid scrolling)
+
 ### Deployment
 
 ```apml
@@ -643,6 +972,86 @@ registry:
 ## Extensions Log
 
 As battles discover gaps, new constructs are added here:
+
+### v2.0.0-alpha.6 (2025-12-05)
+**Added: External Integrations (GAP-006)**
+
+The `external` construct enables declarative integration with third-party services and SDKs. This pattern appeared in 4 out of 6 battles and is critical for modern applications that rely on external services for authentication, payments, analytics, and more.
+
+**Key Features**:
+- Type-based categorization (auth_provider, payments, analytics, etc.)
+- SDK package reference with `sdk: "package_name"`
+- Explicit `provides` list for exposed functionality
+- Event handlers with `on event_name` for integration lifecycle
+- Webhook handlers with `webhook name:` blocks
+- Webhook signature verification with `verify: signature_type`
+- Event-specific handlers with `on event "event.name"`
+
+**Synthesis from Battles**:
+- Alexander: Clerk authentication with auth change handlers, Supabase sync
+- Zenjin: Stripe payments with webhook handlers for checkout completion
+- Popty: Analytics tracking, error monitoring
+- X.com: Analytics events, monitoring integrations
+
+**Use Cases**:
+- Authentication providers (Clerk, Auth0, Firebase Auth)
+- Payment processing (Stripe, PayPal, Square)
+- Analytics and tracking (Mixpanel, Segment, Google Analytics)
+- Email services (SendGrid, Mailgun)
+- Error monitoring (Sentry, LogRocket)
+- File storage (S3, Cloudinary)
+- Webhook receivers for external events
+
+**Example - Auth Provider with Event Handling**:
+```apml
+external clerk:
+  type: auth_provider
+  sdk: "@clerk/vue"
+
+  provides:
+    - current_user
+    - sign_in_flow
+    - sign_out
+
+  on auth_change(user):
+    if user:
+      sync user_profile to database
+      navigate to "/dashboard"
+    else:
+      navigate to "/login"
+```
+
+**Example - Payment Processing with Webhooks**:
+```apml
+external stripe:
+  type: payments
+  sdk: "@stripe/stripe-js"
+
+  provides:
+    - checkout_session
+    - payment_element
+
+  webhook checkout_complete:
+    verify: stripe_signature
+    on event "checkout.session.completed":
+      activate subscription for user
+      send email "Welcome to Premium"
+```
+
+**Webhook Verification Types**:
+- `stripe_signature` - Stripe webhook signature verification
+- `github_signature` - GitHub webhook HMAC verification
+- `hmac_sha256` - Generic HMAC SHA-256 verification
+- `bearer_token` - Bearer token authentication
+- `custom` - Custom verification logic
+
+**Compiler Requirements**:
+- Must resolve SDK packages and generate appropriate imports
+- Must map `provides` values to framework-specific composables/hooks
+- Must implement webhook endpoint generation with signature verification
+- Should validate integration types and warn on unknown types
+- Must handle event routing to appropriate handlers
+- Should support both client-side SDK initialization and server-side webhook handling
 
 ### v2.0.0-alpha.5 (2025-12-05)
 **Added: State Machines (GAP-002)**
