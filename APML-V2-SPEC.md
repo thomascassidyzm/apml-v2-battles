@@ -272,7 +272,20 @@ This section tracks patterns that current APML cannot express. As battles progre
 
 | Gap | Discovered By | Status | Proposed Solution |
 |-----|---------------|--------|-------------------|
-| (none yet) | - | - | - |
+| App Lifecycle Management | Battle 002 (Signal) | Open | `lifecycle` block for foreground/background/terminate states |
+| App Extensions | Battle 002 (Signal) | Open | `extensions` block for notification/share extensions |
+| Push Notifications | Battle 002 (Signal) | Open | `notifications` block for APNs/FCM configuration |
+| Persistent Connections (WebSocket) | Battle 002 (Signal) | Open | `realtime` block for WebSocket/SSE |
+| Biometric Authentication | Battle 002 (Signal) | Open | `auth.local_device` for Face ID/Touch ID |
+| Device Permissions | Battle 002 (Signal) | Open | `permissions` block for contacts/camera/etc |
+| Offline-First Architecture | Battle 002 (Signal) | Open | `storage.offline_first` strategy |
+| E2E Encryption | Battle 002 (Signal) | Open | `encryption` block for crypto primitives |
+| Background Job Queues | Battle 002 (Signal) | Open | `jobs` block for persistent background tasks |
+| Voice/Video Calling | Battle 002 (Signal) | Open | `calling` block for WebRTC configuration |
+| Disappearing/Ephemeral Data | Battle 002 (Signal) | Open | `expiration` modifier on data models |
+| Multi-Device Sync | Battle 002 (Signal) | Open | `multi_device` block for device linking |
+| Media Processing | Battle 002 (Signal) | Open | `media` block for compression/thumbnails |
+| Typing Indicators/Presence | Battle 002 (Signal) | Open | `presence` block for real-time status |
 
 ---
 
