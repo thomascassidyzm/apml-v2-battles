@@ -16,6 +16,11 @@ import type {
   Field,
   InterfaceSection,
   ComputedValue,
+  UIElement,
+  ShowElement,
+  ConditionalElement,
+  IterationElement,
+  Expression,
 } from '../types/ast.js';
 
 export interface GeneratedFile {
@@ -278,20 +283,10 @@ export class VueGenerator {
     // Template section
     lines.push('<template>');
     lines.push(`${this.indent}<div class="${this.toKebabCase(iface.name)}">`);
-    lines.push(`${this.indent}${this.indent}<!-- TODO: Generated template -->`);
 
-    // Generate basic template structure from show elements
+    // Generate template structure from UI elements
     for (const element of iface.elements) {
-      if (element.type === 'show') {
-        lines.push(`${this.indent}${this.indent}<div class="${element.elementName}">`);
-
-        // Add properties as comments for now
-        for (const [key, value] of Object.entries(element.properties)) {
-          lines.push(`${this.indent}${this.indent}${this.indent}<!-- ${key}: ${value} -->`);
-        }
-
-        lines.push(`${this.indent}${this.indent}</div>`);
-      }
+      this.generateUIElement(element, lines, 2);
     }
 
     lines.push(`${this.indent}</div>`);
@@ -330,6 +325,244 @@ export class VueGenerator {
       path: `src/components/${componentName}.vue`,
       content: lines.join('\n'),
     };
+  }
+
+  /**
+   * Generate a UI element (show, when, for_each)
+   */
+  private generateUIElement(element: UIElement, lines: string[], indentLevel: number): void {
+    const indent = this.indent.repeat(indentLevel);
+
+    if (element.type === 'show') {
+      this.generateShowElement(element, lines, indentLevel);
+    } else if (element.type === 'when' || element.type === 'if') {
+      this.generateConditionalElement(element, lines, indentLevel);
+    } else if (element.type === 'for_each') {
+      this.generateIterationElement(element, lines, indentLevel);
+    }
+  }
+
+  /**
+   * Generate a show element with proper HTML tag
+   */
+  private generateShowElement(element: ShowElement, lines: string[], indentLevel: number): void {
+    const indent = this.indent.repeat(indentLevel);
+    const tag = this.getHTMLTag(element.elementName);
+    const className = this.toKebabCase(element.elementName);
+    const attributes: string[] = [];
+
+    // Add class attribute
+    attributes.push(`class="${className}"`);
+
+    // Process properties to generate attributes
+    const textContent = this.processProperties(element.properties, attributes);
+
+    // Build opening tag
+    const openTag = attributes.length > 0
+      ? `<${tag} ${attributes.join(' ')}>`
+      : `<${tag}>`;
+
+    lines.push(`${indent}${openTag}`);
+
+    // Add text content if present
+    if (textContent) {
+      lines.push(`${indent}${this.indent}${textContent}`);
+    }
+
+    // Generate children
+    if (element.children && element.children.length > 0) {
+      for (const child of element.children) {
+        this.generateUIElement(child, lines, indentLevel + 1);
+      }
+    }
+
+    // Close tag
+    lines.push(`${indent}</${tag}>`);
+  }
+
+  /**
+   * Generate a conditional element (when/if) with v-if
+   */
+  private generateConditionalElement(element: ConditionalElement, lines: string[], indentLevel: number): void {
+    const indent = this.indent.repeat(indentLevel);
+    const condition = this.expressionToVueCondition(element.condition);
+
+    // Wrap conditional content in a div with v-if
+    lines.push(`${indent}<div v-if="${condition}">`);
+
+    // Generate then block
+    for (const thenElement of element.then) {
+      this.generateUIElement(thenElement, lines, indentLevel + 1);
+    }
+
+    lines.push(`${indent}</div>`);
+
+    // Generate else block if present
+    if (element.else && element.else.length > 0) {
+      lines.push(`${indent}<div v-else>`);
+      for (const elseElement of element.else) {
+        this.generateUIElement(elseElement, lines, indentLevel + 1);
+      }
+      lines.push(`${indent}</div>`);
+    }
+  }
+
+  /**
+   * Generate an iteration element (for_each) with v-for
+   */
+  private generateIterationElement(element: IterationElement, lines: string[], indentLevel: number): void {
+    const indent = this.indent.repeat(indentLevel);
+    const collection = this.expressionToString(element.collection);
+    const itemName = element.itemName;
+
+    // Wrap iteration content in a div with v-for
+    lines.push(`${indent}<div v-for="${itemName} in ${collection}" :key="${itemName}.id">`);
+
+    // Generate body
+    for (const bodyElement of element.body) {
+      this.generateUIElement(bodyElement, lines, indentLevel + 1);
+    }
+
+    lines.push(`${indent}</div>`);
+  }
+
+  /**
+   * Map APML element names to HTML tags
+   */
+  private getHTMLTag(elementName: string): string {
+    const lowerName = elementName.toLowerCase();
+
+    // Special cases first (more specific)
+    // Only map to button if it's specifically a tab or button, not a selector/container
+    if ((lowerName.endsWith('_tab') || lowerName === 'tab') && !lowerName.includes('table')) {
+      return 'button';
+    }
+
+    // Direct mappings
+    const tagMap: Record<string, string> = {
+      header: 'header',
+      footer: 'footer',
+      nav: 'nav',
+      main: 'main',
+      section: 'section',
+      article: 'article',
+      aside: 'aside',
+      button: 'button',
+      input: 'input',
+      textarea: 'textarea',
+      form: 'form',
+      label: 'label',
+      img: 'img',
+      video: 'video',
+      audio: 'audio',
+      canvas: 'canvas',
+      svg: 'svg',
+      table: 'table',
+      ul: 'ul',
+      ol: 'ol',
+      li: 'li',
+      span: 'span',
+      p: 'p',
+      h1: 'h1',
+      h2: 'h2',
+      h3: 'h3',
+      h4: 'h4',
+      h5: 'h5',
+      h6: 'h6',
+    };
+
+    // Check if element name contains known tag
+    for (const [key, tag] of Object.entries(tagMap)) {
+      if (lowerName === key || lowerName.includes('_' + key) || lowerName.includes(key + '_')) {
+        return tag;
+      }
+    }
+
+    // Default to div
+    return 'div';
+  }
+
+  /**
+   * Process element properties and generate attributes
+   * Returns text content if any
+   */
+  private processProperties(properties: Record<string, string | Expression>, attributes: string[]): string | null {
+    let textContent: string | null = null;
+
+    for (const [key, value] of Object.entries(properties)) {
+      const valueStr = this.expressionToString(value);
+
+      if (key === 'text' || key === 'label') {
+        // Check if it's a dynamic expression
+        if (valueStr.includes('.') || valueStr.includes('(') || valueStr.includes('+')) {
+          textContent = `{{ ${valueStr} }}`;
+        } else if (valueStr.startsWith('"') || valueStr.startsWith("'")) {
+          // Static string - remove quotes
+          textContent = valueStr.slice(1, -1);
+        } else {
+          textContent = `{{ ${valueStr} }}`;
+        }
+      } else if (key === 'active') {
+        // Convert active property to dynamic class binding
+        const cleanValue = this.expressionToVueCondition(valueStr);
+        const classBinding = `:class="{ active: ${cleanValue} }"`;
+        attributes.push(classBinding);
+      } else if (key === 'src') {
+        // Image/video source
+        if (valueStr.includes('.')) {
+          attributes.push(`:src="${valueStr}"`);
+        } else {
+          attributes.push(`src="${valueStr}"`);
+        }
+      } else if (key === 'icon') {
+        // Icon - check if dynamic or static
+        if (valueStr.includes('?') || valueStr.includes('.')) {
+          // Dynamic icon - use Vue binding
+          attributes.push(`:data-icon="${valueStr}"`);
+        } else {
+          // Static icon - remove quotes from icon value for cleaner output
+          const cleanIcon = valueStr.replace(/^["']|["']$/g, '');
+          attributes.push(`data-icon="${cleanIcon}"`);
+        }
+      } else if (key.startsWith('on_')) {
+        // Event handlers - skip for now, handle in script section
+        continue;
+      } else {
+        // Style properties - add as comments for now
+        // These should be handled by the style section
+        continue;
+      }
+    }
+
+    return textContent;
+  }
+
+  /**
+   * Convert expression to Vue condition syntax
+   */
+  private expressionToVueCondition(expr: Expression | string): string {
+    const exprStr = this.expressionToString(expr);
+
+    // Convert APML operators to JavaScript
+    let result = this.convertAPMLToJS(exprStr);
+
+    // Convert 'not' to '!' if it appears at the start
+    result = result.replace(/^not\s+/, '!');
+    result = result.replace(/\(\s*not\s+/g, '(!');
+
+    // Convert snake_case to camelCase for variables
+    result = result.replace(/\b[a-z]+(_[a-z]+)+\b/g, (match) => {
+      return this.snakeToCamelCase(match);
+    });
+
+    return result;
+  }
+
+  /**
+   * Convert snake_case to camelCase
+   */
+  private snakeToCamelCase(str: string): string {
+    return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
   }
 
   // ==========================================================================
