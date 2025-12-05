@@ -15,9 +15,10 @@
 ## Critical Gaps (Blocking X.com PWA)
 
 ### GAP-001: Real-time/WebSocket
-**Status:** 🔴 Open
+**Status:** 🟢 Merged
 **Appeared in:** Popty, Signal, X.com, Zenjin (4/6 battles)
 **Severity:** CRITICAL
+**Merged in:** APML v2.0.0-alpha.3
 
 **Problem:**
 APML's `call api` is request-response only. Modern apps need persistent connections for live updates (new posts, notifications, typing indicators).
@@ -67,7 +68,8 @@ realtime:
     reconnect_policy: exponential_backoff(max: 5 minutes)
 ```
 
-**Synthesis needed:** Combine these into unified `realtime` block.
+**Solution (Merged):**
+Unified `realtime` construct with connection lifecycle handlers, channel subscriptions, message filtering, and configurable reconnection policies. See APML-V2-SPEC.md "Real-time Connections" section.
 
 ---
 
@@ -425,4 +427,5 @@ Cryptographic operations are implementation details, not declarative specs. Apps
 
 | Date | Gap | Solution | Spec Version |
 |------|-----|----------|--------------|
+| 2025-12-05 | GAP-001 | Real-time connections with `realtime` block, WebSocket support, subscriptions, reconnection policies | v2.0.0-alpha.3 |
 | 2025-12-05 | GAP-003 | Optimistic UI with `optimistic` block, automatic rollback, success/error callbacks | v2.0.0-alpha.2 |

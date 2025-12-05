@@ -106,6 +106,73 @@ for each item in items:
     description: item.description
 ```
 
+### Computed Values
+
+Computed values are reactive expressions that automatically update when their dependencies change. They are ideal for derived state, filtered lists, aggregates, and formatted values.
+
+**Simple Syntax**:
+```apml
+computed property_name: expression
+```
+
+**Full Syntax**:
+```apml
+computed property_name:
+  value: expression
+  format: format_type
+  cache: boolean
+```
+
+**Examples**:
+```apml
+# Simple computed - filtered lists
+computed filtered_posts: posts.filter(p => p.category == selected_category)
+
+# Simple computed - aggregates
+computed total_likes: posts.sum(p => p.likes_count)
+
+# With formatting - percentage
+computed ftc_percentage:
+  value: (correct_first_time / total_attempts) * 100
+  format: percentage
+
+# With formatting - currency
+computed cost_estimate:
+  value: tokens * rate_per_token
+  format: currency
+
+# With caching (for expensive calculations)
+computed mastery_level:
+  value: weighted_average(recent_scores, decay: 0.9)
+  cache: true
+
+# Multiple dependencies
+computed user_display_name:
+  value: user.first_name + " " + user.last_name
+```
+
+**Format Types**:
+- `percentage` - Formats as percentage (e.g., 75.5%)
+- `currency` - Formats as money (e.g., $10.50)
+- `number` - Formatted number with locale-specific separators
+- `date` - Formatted date
+- `timestamp` - Formatted date and time
+- `duration` - Formatted time duration (e.g., "2h 30m")
+
+**Behavior**:
+- **Auto-tracked dependencies**: Framework automatically detects which values the computed depends on
+- **Lazy evaluation**: Only recomputed when accessed and dependencies changed
+- **Cached by default**: Result is cached until dependencies change
+- **Can be used anywhere**: In templates, other computed values, or logic blocks
+- **Explicit caching**: Use `cache: true` to persist across multiple dependency changes (useful for expensive operations)
+
+**Use Cases**:
+- Filtering and sorting collections
+- Calculating totals, averages, and statistics
+- Formatting display values
+- Combining multiple data sources
+- Complex business logic that derives from state
+
 ### Logic Sections
 
 ```apml
@@ -198,6 +265,118 @@ integrations:
     methods: [email, google, github]
 ```
 
+### Real-time Connections
+
+For persistent connections that push updates to the client (WebSocket, SSE, etc.):
+
+```apml
+realtime connection_name:
+  url: "wss://api.example.com/ws"
+
+  on_connected:
+    action_to_perform
+
+  on_disconnected:
+    action_to_perform
+
+  subscribe channel_name:
+    on_message(event_data):
+      action_with_event_data
+
+  subscribe another_channel:
+    filter: condition
+    on_message(event):
+      action_with_event
+
+  heartbeat: duration
+  reconnect_policy: strategy
+```
+
+**Connection Lifecycle**:
+- `url` - WebSocket URL (wss:// or ws://)
+- `on_connected` - Actions when connection established
+- `on_disconnected` - Actions when connection lost
+
+**Channel Subscriptions**:
+- `subscribe channel_name` - Subscribe to a channel/topic
+- `filter` - Optional condition to filter messages
+- `on_message(data)` - Handler for incoming messages
+
+**Connection Management**:
+- `heartbeat: N seconds` - Keepalive interval
+- `reconnect_policy` - How to handle reconnection
+  - `exponential_backoff` - Exponential backoff strategy
+  - `exponential_backoff(max: duration)` - With maximum delay
+  - `fixed_interval(N seconds)` - Fixed retry interval
+  - `none` - No automatic reconnection
+
+**Example: Live Feed Updates**
+```apml
+realtime feed_stream:
+  url: "wss://stream.x.com/timeline"
+
+  on_connected:
+    show connection_indicator
+    sync pending_updates
+
+  subscribe "home_timeline":
+    on_message(new_post):
+      prepend new_post to posts
+      show new_posts_indicator
+      play notification_sound
+
+  subscribe "notifications":
+    filter: notification.type in [mention, reply, like]
+    on_message(notification):
+      increment notification_badge
+      show notification_toast
+
+  heartbeat: 30 seconds
+  reconnect_policy: exponential_backoff(max: 5 minutes)
+```
+
+**Example: Live Dashboard**
+```apml
+realtime dashboard_updates:
+  url: "wss://api.example.com/ws"
+
+  on_connected:
+    set connection_status to "live"
+
+  on_disconnected:
+    set connection_status to "offline"
+    show reconnecting_indicator
+
+  subscribe "pipeline_updates":
+    on_message(update):
+      update pipeline_status with update
+      refresh metrics
+
+  reconnect_policy: exponential_backoff
+```
+
+**Example: Chat Application**
+```apml
+realtime chat_socket:
+  url: "wss://chat.example.org/v1/websocket"
+
+  on_connected:
+    sync pending_messages
+    mark user_status as "online"
+
+  on_message(envelope):
+    route envelope to message_processor
+    decrypt envelope.content if envelope.encrypted
+    append to conversation_thread
+
+  on_disconnected:
+    mark user_status as "offline"
+    queue outgoing_messages for retry
+
+  heartbeat: 30 seconds
+  reconnect_policy: exponential_backoff(max: 5 minutes)
+```
+
 ### Deployment
 
 ```apml
@@ -283,6 +462,127 @@ registry:
 ## Extensions Log
 
 As battles discover gaps, new constructs are added here:
+
+### v2.0.0-alpha.4 (2025-12-05)
+**Added: Computed Values (GAP-004)**
+
+The `computed` construct enables reactive, auto-updating derived values. This pattern appeared in all 6 battles and is fundamental for modern reactive applications.
+
+**Key Features**:
+- Simple syntax for basic expressions: `computed name: expression`
+- Full syntax with formatting options
+- Automatic dependency tracking (reactive)
+- Lazy evaluation and caching
+- Support for multiple format types (percentage, currency, date, etc.)
+- Can be used in templates, logic blocks, and other computed values
+
+**Synthesis from Battles**:
+- Alexander: Filtered posts by category, aggregated totals
+- Zenjin: FTC percentage, mastery level calculations with decay
+- Popty: Cost estimates with rate awareness
+- All battles: Need for derived state without manual updates
+
+**Use Cases**:
+- Filtering and sorting collections
+- Calculating totals, averages, and statistics
+- Formatting display values
+- Combining multiple data sources
+- Complex business logic that derives from state
+
+**Example - Filtered Lists**:
+```apml
+# Automatically updates when posts or selected_category changes
+computed filtered_posts: posts.filter(p => p.category == selected_category)
+
+# Use in template
+for each post in filtered_posts:
+  show post_card with post
+```
+
+**Example - Formatted Metrics**:
+```apml
+computed ftc_percentage:
+  value: (correct_first_time / total_attempts) * 100
+  format: percentage
+  # Displays as "87.5%" automatically
+
+computed monthly_cost:
+  value: tokens_used * rate_per_token
+  format: currency
+  # Displays as "$10.50" with proper locale formatting
+```
+
+**Example - Complex Calculations**:
+```apml
+computed mastery_level:
+  value: weighted_average(recent_scores, decay: 0.9)
+  cache: true  # Expensive calculation, cache aggressively
+```
+
+**Compiler Requirements**:
+- Must implement automatic dependency tracking
+- Must only recompute when dependencies change
+- Should support all specified format types
+- Must handle circular dependencies gracefully (error or warn)
+- Should optimize for minimal recomputation
+
+### v2.0.0-alpha.3 (2025-12-05)
+**Added: Real-time Connections (GAP-001)**
+
+The `realtime` construct enables persistent connections for live updates via WebSocket or similar protocols. This pattern is critical for modern web applications requiring real-time data synchronization.
+
+**Key Features**:
+- WebSocket URL configuration
+- Connection lifecycle handlers (on_connected, on_disconnected)
+- Channel/topic subscriptions with message handlers
+- Message filtering within subscriptions
+- Configurable heartbeat intervals
+- Flexible reconnection policies (exponential backoff, fixed interval)
+
+**Synthesis from Battles**:
+- Popty: Dashboard pipeline updates via WebSocket
+- X.com: Live feed updates, notifications streaming
+- Signal: Chat message envelope routing, presence sync
+- Zenjin: Real-time leaderboard updates
+
+**Use Cases**:
+- Social media feeds and notifications
+- Chat and messaging applications
+- Live dashboards and analytics
+- Collaborative editing
+- Gaming leaderboards and matchmaking
+- IoT device monitoring
+
+**Example - Social Media Feed**:
+```apml
+realtime feed_stream:
+  url: "wss://stream.x.com/timeline"
+
+  on_connected:
+    show connection_indicator
+    sync pending_updates
+
+  subscribe "home_timeline":
+    on_message(new_post):
+      prepend new_post to posts
+      show new_posts_indicator
+
+  subscribe "notifications":
+    filter: notification.type in [mention, reply]
+    on_message(notification):
+      increment notification_badge
+
+  heartbeat: 30 seconds
+  reconnect_policy: exponential_backoff(max: 5 minutes)
+```
+
+**Compiler Requirements**:
+- Must establish and manage WebSocket connections
+- Must handle automatic reconnection with specified policy
+- Must track subscription state and route messages to handlers
+- Should provide connection status indicators to UI layer
+- Must implement heartbeat/keepalive mechanism
+- Should handle graceful disconnection and cleanup
 
 ### v2.0.0-alpha.2 (2025-12-05)
 **Added: Optimistic UI Pattern (GAP-003)**
