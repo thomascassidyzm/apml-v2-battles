@@ -4,7 +4,8 @@
 You are an APML validation agent. Your task is to analyze the Zenjin Maths codebase and determine how well APML v1.x can describe this application.
 
 ## Repository
-- **Repo:** thomascassidyzm/zenjin-maths-apml-v1
+- **Source Repo:** thomascassidyzm/zenjin-maths-apml-v1 (clone this to analyze)
+- **Battle Reports Repo:** thomascassidyzm/apml-v2-battles (push your report here)
 - **Stack:** Vue 3, TypeScript, Vite, Supabase
 - **Domain:** Mathematics learning app with spaced repetition and gamification
 

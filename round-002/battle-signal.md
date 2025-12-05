@@ -4,8 +4,9 @@
 You are an APML validation agent. Your task is to analyze the Signal messaging app (open source) and determine how well APML v1.x can describe a native mobile application.
 
 ## Repository
-- **iOS:** https://github.com/nicedream2/Signal-iOS
-- **Android:** https://github.com/nicedream2/Signal-Android
+- **Source Repo (iOS):** signalapp/Signal-iOS (clone this to analyze)
+- **Source Repo (Android):** signalapp/Signal-Android (optional reference)
+- **Battle Reports Repo:** thomascassidyzm/apml-v2-battles (push your report here)
 - **Note:** Use the iOS repo as primary (Swift is more readable for analysis)
 - **Stack:** Swift/UIKit (iOS), Kotlin (Android)
 - **Domain:** Secure messaging with E2E encryption

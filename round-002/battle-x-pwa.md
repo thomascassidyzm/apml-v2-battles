@@ -5,8 +5,10 @@ You are an APML validation agent. Your task is to describe the X.com (Twitter) P
 
 ## Target
 - **URL:** https://x.com (mobile PWA experience)
+- **Battle Reports Repo:** thomascassidyzm/apml-v2-battles (push your report here)
 - **Stack:** Unknown (React-based, likely)
 - **Domain:** Social media with real-time updates
+- **NOTE:** No codebase access - this is intentional. Analyze from usage only.
 
 ## Your Tasks
 
