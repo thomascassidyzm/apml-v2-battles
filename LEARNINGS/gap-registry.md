@@ -126,49 +126,40 @@ state_machine auth_flow:
 ---
 
 ### GAP-003: Optimistic UI
-**Status:** 🔴 Open
+**Status:** 🟢 Merged
 **Appeared in:** Cowch, Alexander, X.com (3/6 battles)
 **Severity:** CRITICAL
 
 **Problem:**
 Modern UX expects instant feedback. When user likes a post, the heart fills immediately - don't wait for server. If server fails, rollback.
 
-**Proposals from battles:**
-
-**From X.com:**
+**Merged Solution (v2.0.0-alpha.2):**
 ```apml
-process like_post:
-  when user clicks like_button on post:
-    # Optimistic update
+process action_name:
+  when trigger:
     optimistic:
-      increment post.likes_count by 1
-      set post.is_liked to true
+      # Immediate UI updates
+      state_update_1
+      state_update_2
 
-    # Server sync
-    call api like_post with { post_id: post.id }
+    call api endpoint_name with params
 
-    # Rollback on error
     on_error:
-      rollback
-      show notification "Failed to like"
+      rollback  # Automatic revert
+      show notification "Error message"
+
+    on_success:
+      show notification "Success message"
 ```
 
-**Alternative syntax:**
-```apml
-action like_post:
-  optimistic_update:
-    post.likes_count += 1
-    post.is_liked = true
+**Key Decisions:**
+- Used `optimistic` block (cleaner than `optimistic_update`)
+- Automatic rollback via `rollback` keyword
+- Works within `process` or `action` blocks
+- Compiler must track all mutations for atomic rollback
+- Optional `on_success` and `on_error` callbacks
 
-  server_call:
-    api.like_post(post.id)
-
-  on_failure:
-    revert optimistic_update
-    toast "Couldn't like post"
-```
-
-**Synthesis needed:** Decide on `optimistic` block vs `optimistic_update` modifier.
+**See:** APML-V2-SPEC.md v2.0.0-alpha.2 Extensions Log
 
 ---
 
@@ -434,4 +425,4 @@ Cryptographic operations are implementation details, not declarative specs. Apps
 
 | Date | Gap | Solution | Spec Version |
 |------|-----|----------|--------------|
-| - | - | (none yet) | - |
+| 2025-12-05 | GAP-003 | Optimistic UI with `optimistic` block, automatic rollback, success/error callbacks | v2.0.0-alpha.2 |

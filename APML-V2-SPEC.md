@@ -146,6 +146,30 @@ logic section_name:
 - `send email`
 - `call api`
 
+**Optimistic Updates**:
+```apml
+process action_name:
+  when trigger:
+    optimistic:
+      # Immediate UI updates (applied before server call)
+      state_update_1
+      state_update_2
+
+    # Server sync (happens after optimistic updates)
+    call api endpoint_name with params
+
+    # Automatic rollback on error
+    on_error:
+      rollback  # Reverts all optimistic updates
+      show notification "Error message"
+
+    # Optional: custom success handling
+    on_success:
+      show notification "Success message"
+```
+
+The `optimistic` block applies state changes immediately for instant UI feedback. If the subsequent API call fails, all optimistic changes are automatically reverted. This enables responsive UIs without manual rollback code.
+
 ### Integrations
 
 ```apml
@@ -259,6 +283,73 @@ registry:
 ## Extensions Log
 
 As battles discover gaps, new constructs are added here:
+
+### v2.0.0-alpha.2 (2025-12-05)
+**Added: Optimistic UI Pattern (GAP-003)**
+
+The `optimistic` block enables instant user feedback for actions that require server synchronization. This pattern is critical for modern web applications where users expect immediate visual feedback.
+
+**Key Features**:
+- State changes in `optimistic` block apply immediately
+- Subsequent API calls happen in background
+- Automatic rollback on failure
+- Optional success/error callbacks
+- Works within `process` or `action` blocks
+
+**Example - Social Media Like**:
+```apml
+logic post_interactions:
+
+  process like_post:
+    when user clicks like_button on post:
+      optimistic:
+        increment post.likes_count by 1
+        set post.is_liked to true
+        animate like_button with heart_pop
+
+      call api like_post with { post_id: post.id }
+
+      on_error:
+        rollback
+        show notification "Failed to like post"
+
+      on_success:
+        # Optional: sync with server response
+        update post.likes_count with response.likes_count
+```
+
+**Example - E-commerce Add to Cart**:
+```apml
+logic shopping:
+
+  process add_to_cart:
+    when user clicks add_button on product:
+      optimistic:
+        append product to cart.items
+        increment cart.item_count by 1
+        update cart_badge with cart.item_count
+        show notification "Added to cart"
+
+      call api add_to_cart with {
+        product_id: product.id,
+        quantity: 1
+      }
+
+      on_error:
+        rollback
+        show notification "Failed to add item. Try again."
+```
+
+**Rollback Behavior**:
+- `rollback` keyword reverts ALL state changes within the `optimistic` block
+- Rollback is automatic - compiler tracks all optimistic mutations
+- Custom rollback logic can be added after `rollback` keyword
+
+**Compiler Requirements**:
+- Must capture initial state before applying optimistic updates
+- Must track all mutations within optimistic block
+- Must provide atomic rollback mechanism
+- Should debounce rapid successive optimistic actions
 
 ### v2.0.0-alpha.1 (2025-12-05)
 - Initial spec based on APML v1.0
