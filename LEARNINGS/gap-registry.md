@@ -188,44 +188,30 @@ Supports automatic dependency tracking, lazy evaluation, caching, and multiple f
 ---
 
 ### GAP-005: Infinite Scroll/Virtualization
-**Status:** 🔴 Open
+**Status:** 🟢 Merged
 **Appeared in:** X.com (1/6 battles, but critical for feeds)
 **Severity:** CRITICAL for social/feed apps
+**Merged in:** APML v2.0.0-alpha.7
 
 **Problem:**
 `for each` assumes all items render. Infinite feeds need virtualization (only render visible items) and pagination.
 
-**Proposals from battles:**
+**Solution (Merged):**
+Unified `virtualized_list` construct with:
+- `show virtualized_list` (primary syntax)
+- `show list: type: virtualized` (alternative modifier-based syntax)
+- `items: data_source` for data binding
+- `item_height: estimated Npx` for scroll calculations
+- `overscan: N` for extra rendering buffer
+- `pagination:` block with `strategy: cursor|offset` and `load_more: trigger`
+- `on scroll_near_end(threshold: %)` for load triggers
+- `on scroll_top` for reverse loading (chat history)
+- `template item_name:` for item rendering
+- Support for `reverse_scroll` for chat-style lists
+- Automatic scroll position maintenance
+- Prepend support without scroll jump
 
-**From X.com:**
-```apml
-show virtualized_list:
-  items: posts
-  item_height: estimated 120px
-  overscan: 5
-
-  on scroll_near_end(threshold: 80%):
-    load_more_posts()
-
-  for each visible_post in viewport:
-    show post_card with visible_post
-```
-
-**Alternative:**
-```apml
-show feed:
-  type: virtualized
-  items: posts
-
-  pagination:
-    strategy: cursor
-    load_more: on_scroll_end
-
-  template post_card:
-    # ... card content
-```
-
-**Synthesis needed:** Decide on explicit `virtualized_list` vs `type: virtualized` modifier.
+**See:** APML-V2-SPEC.md v2.0.0-alpha.7 Extensions Log
 
 ---
 
@@ -411,6 +397,7 @@ Cryptographic operations are implementation details, not declarative specs. Apps
 
 | Date | Gap | Solution | Spec Version |
 |------|-----|----------|--------------|
+| 2025-12-05 | GAP-005 | Virtualized lists with `virtualized_list` construct, pagination strategies, scroll event handlers, item templates | v2.0.0-alpha.7 |
 | 2025-12-05 | GAP-006 | External integrations with `external` construct, SDK references, event handlers, webhook support with signature verification | v2.0.0-alpha.6 |
 | 2025-12-05 | GAP-002 | State machines with explicit states, transitions, guards, actions, and cooldowns | v2.0.0-alpha.5 |
 | 2025-12-05 | GAP-004 | Computed/reactive values with `computed` construct, auto-tracking, formatting, caching | v2.0.0-alpha.4 |

@@ -1,6 +1,6 @@
 # APML v2.0 Specification
 
-**Version**: 2.0.0-alpha.5
+**Version**: 2.0.0-alpha.7
 **Status**: Evolving through empirical discovery
 **Last Updated**: 2025-12-05
 
@@ -972,6 +972,85 @@ registry:
 ## Extensions Log
 
 As battles discover gaps, new constructs are added here:
+
+### v2.0.0-alpha.7 (2025-12-05)
+**Added: Virtualized Lists (GAP-005)**
+
+The `virtualized_list` construct enables efficient rendering of large or infinite lists by only rendering visible items. This pattern is critical for social media feeds, chat applications, and any interface with potentially unbounded collections.
+
+**Key Features**:
+- `items` - Data source (array or computed collection)
+- `item_height: estimated Npx` - For scroll position calculations
+- `overscan: N` - Extra items to render above/below viewport (default: 3)
+- Pagination strategies (`cursor` or `offset` based)
+- Load triggers (`on_scroll_end`, `on_button_click`, `automatic`)
+- Scroll event handlers (`on scroll_near_end`, `on scroll_top`)
+- Item templates for rendering each item
+
+**Synthesis from Battles**:
+- X.com: Infinite scrolling feed with cursor-based pagination, prepending new posts, real-time updates
+
+**Use Cases**:
+- Social media feeds (infinite scroll)
+- Chat message history (reverse scroll, load older on scroll top)
+- Product catalogs with pagination
+- Log viewers
+- Search results
+- News feeds
+- Activity timelines
+
+**Example - Infinite Social Feed**:
+```apml
+show virtualized_list post_feed:
+  items: posts
+  item_height: estimated 120px
+  overscan: 5
+
+  pagination:
+    strategy: cursor
+    load_more: on_scroll_end
+
+  on scroll_near_end(threshold: 80%):
+    load_more_posts()
+
+  template post_card:
+    show card:
+      avatar: post.author.avatar
+      username: post.author.username
+      content: post.text
+      likes: post.likes_count
+```
+
+**Example - Chat Messages (Reverse Scroll)**:
+```apml
+show virtualized_list message_list:
+  items: messages
+  item_height: estimated 60px
+  overscan: 10
+  reverse_scroll: true
+
+  pagination:
+    strategy: cursor
+    load_more: on_scroll_top
+
+  on scroll_top:
+    load_older_messages()
+
+  template message_bubble:
+    show bubble:
+      position: message.is_mine ? "right" : "left"
+      text: message.content
+```
+
+**Compiler Requirements**:
+- Must implement virtual scrolling (render only visible items + overscan)
+- Must track scroll position and calculate visible range efficiently
+- Must handle dynamic item heights if `item_height` is "estimated"
+- Should implement scroll event throttling/debouncing
+- Must support bidirectional loading (top/bottom)
+- Should provide loading states and placeholders
+- Must handle prepending new items without scroll jump
+- Must handle edge cases (empty lists, single item, rapid scrolling)
 
 ### v2.0.0-alpha.6 (2025-12-05)
 **Added: External Integrations (GAP-006)**
