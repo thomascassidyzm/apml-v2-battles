@@ -166,42 +166,22 @@ process action_name:
 ---
 
 ### GAP-004: Computed/Reactive Values
-**Status:** 🔴 Open
+**Status:** 🟢 Merged
 **Appeared in:** All 6 battles
 **Severity:** CRITICAL
+**Merged in:** APML-V2-SPEC.md v2.0.0-alpha.4
 
 **Problem:**
 Values that derive from other values (filtered lists, aggregates, formatted strings). APML has no `computed` construct.
 
-**Proposals from battles:**
+**Solution:**
+Added `computed` construct with two syntaxes:
+- Simple: `computed name: expression`
+- Full: `computed name: { value: expr, format: type, cache: bool }`
 
-**From Alexander:**
-```apml
-computed filtered_posts:
-  value: posts.filter(p => p.category == selected_category)
+Supports automatic dependency tracking, lazy evaluation, caching, and multiple format types (percentage, currency, number, date, timestamp, duration).
 
-computed total_likes:
-  value: posts.sum(p => p.likes_count)
-```
-
-**From Zenjin:**
-```apml
-computed_metric ftc_percentage:
-  formula: (correct_first_time / total_attempts) * 100
-  format: percentage
-
-computed_metric mastery_level:
-  formula: weighted_average(recent_scores, decay: 0.9)
-```
-
-**From Popty:**
-```apml
-computed cost_estimate:
-  formula: tokens * rate_per_token
-  @cost_aware  # flag for explicit approval
-```
-
-**Synthesis needed:** Unified `computed` with optional formatting/flags.
+**See:** APML-V2-SPEC.md v2.0.0-alpha.4 Extensions Log
 
 ---
 
@@ -427,5 +407,6 @@ Cryptographic operations are implementation details, not declarative specs. Apps
 
 | Date | Gap | Solution | Spec Version |
 |------|-----|----------|--------------|
+| 2025-12-05 | GAP-004 | Computed/reactive values with `computed` construct, auto-tracking, formatting, caching | v2.0.0-alpha.4 |
 | 2025-12-05 | GAP-001 | Real-time connections with `realtime` block, WebSocket support, subscriptions, reconnection policies | v2.0.0-alpha.3 |
 | 2025-12-05 | GAP-003 | Optimistic UI with `optimistic` block, automatic rollback, success/error callbacks | v2.0.0-alpha.2 |
