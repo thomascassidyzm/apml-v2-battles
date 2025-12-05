@@ -92,7 +92,7 @@ export class VueGenerator {
     } else if ('list' in type) {
       const itemType = typeof type.list === 'string'
         ? this.primitiveTypeToTS(type.list)
-        : type.list.model || 'any';
+        : ('model' in type.list ? type.list.model : 'any');
       baseType = `${itemType}[]`;
     } else if ('model' in type) {
       baseType = type.model;
