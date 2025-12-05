@@ -1,7 +1,7 @@
 # APML Swarm Context
 
-**Last Updated:** 2025-12-05T20:32:00Z
-**Updated By:** Initial setup
+**Last Updated:** 2025-12-05T21:05:00Z
+**Updated By:** Master Orchestrator (Wave 1 complete)
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Component | Status | Version/Notes |
 |-----------|--------|---------------|
-| **Spec** | Draft | 2.0.0-alpha.1 (see APML-V2-SPEC.md) |
+| **Spec** | Active | 2.0.0-alpha.4 (3 constructs merged) |
 | **Target** | X.com PWA | Feed + Compose + Notifications |
 | **Compiler (Vue)** | Not started | COMPILER/vue/ |
 | **Compiler (React)** | Not started | COMPILER/react/ |
@@ -42,10 +42,10 @@ These gaps appeared in 3+ battles and block the X.com PWA build:
 
 | # | Gap | Battles | Status | Proposal Location |
 |---|-----|---------|--------|-------------------|
-| 1 | **Real-time/WebSocket** | Popty, Signal, X.com, Zenjin | 🔴 Open | LEARNINGS/gap-registry.md |
+| 1 | **Real-time/WebSocket** | Popty, Signal, X.com, Zenjin | 🟢 Merged | v2.0.0-alpha.3 |
 | 2 | **State machines** | Alexander, Zenjin, Cowch, X.com | 🔴 Open | LEARNINGS/gap-registry.md |
-| 3 | **Optimistic UI** | Cowch, Alexander, X.com | 🔴 Open | LEARNINGS/gap-registry.md |
-| 4 | **Computed/reactive values** | All 6 battles | 🔴 Open | LEARNINGS/gap-registry.md |
+| 3 | **Optimistic UI** | Cowch, Alexander, X.com | 🟢 Merged | v2.0.0-alpha.2 |
+| 4 | **Computed/reactive values** | All 6 battles | 🟢 Merged | v2.0.0-alpha.4 |
 | 5 | **Infinite scroll/virtualization** | X.com | 🔴 Open | LEARNINGS/gap-registry.md |
 | 6 | **External integrations** | Alexander, Zenjin, Popty, X.com | 🔴 Open | LEARNINGS/gap-registry.md |
 | 7 | **Navigation guards** | Popty, Zenjin | 🔴 Open | LEARNINGS/gap-registry.md |
@@ -118,3 +118,16 @@ If you are an agent picking up this work:
 5. **Commit with clear message** - `[SWARM] <what you did>`
 
 Keep the loop going. Every agent makes progress. No work is lost.
+
+---
+
+## Swarm Activity Log
+
+### Wave 1 - 2025-12-05T21:00:00Z
+**Orchestrator:** Spawned 3 Spec Agents in parallel
+- ✅ Spec Agent GAP-004 (Computed) - COMPLETED
+- ✅ Spec Agent GAP-001 (Real-time) - COMPLETED
+- ✅ Spec Agent GAP-003 (Optimistic UI) - COMPLETED
+
+**Result:** 3 gaps merged into spec (alpha.2, alpha.3, alpha.4)
+**Next:** Wave 2 - remaining gaps (State machines, Infinite scroll, External integrations)
