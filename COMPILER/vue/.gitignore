@@ -21,3 +21,4 @@ Thumbs.db
 # Output directory (for testing)
 output/
 test-output/
+test-out/
